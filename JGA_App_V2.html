@@ -1,0 +1,2037 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>JGA Prag 🥋</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:   #1c1813;
+      --gold:    #9c7b30;
+      --red:     #8c3527;
+      --rl:      #f5ecea;
+      --ok:      #2a6b49;
+      --okl:     #deeee6;
+      --bg:      #e4ddd1;
+      --card:    #f2ede3;
+      --dim:     rgba(26,22,16,.55);
+      --f-head:  'Playfair Display', Georgia, serif;
+      --f-body:  'Inter', 'Segoe UI', system-ui, sans-serif;
+    }
+
+    body {
+      font-family: var(--f-body);
+      background: var(--bg);
+      background-image:
+        radial-gradient(ellipse 90% 50% at 15% 30%, rgba(180,148,80,.09) 0%, transparent 65%),
+        radial-gradient(ellipse 70% 60% at 85% 75%, rgba(120,90,40,.07) 0%, transparent 65%);
+      color: #1a1610;
+      min-height: 100vh;
+      padding-bottom: 52px;
+      font-size: 15px;
+    }
+
+    /* ── HEADER ─────────────────────────────────────────────── */
+    .hdr {
+      background: linear-gradient(160deg, #1c1813 0%, #0e0b08 100%);
+      color: #fff;
+      padding: 14px 16px 0;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      box-shadow: 0 3px 16px rgba(0,0,0,.35);
+    }
+    .hdr-row1 {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+    .hdr-title { font-family: var(--f-head); font-size: 1.15rem; font-weight: 700; letter-spacing: .3px; }
+    .hdr-clock { font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .hdr-clock.debug { color: var(--gold); }
+
+    .next-hint {
+      font-size: 0.74rem;
+      opacity: .75;
+      margin-bottom: 8px;
+      min-height: 1.1em;
+      letter-spacing: .2px;
+    }
+
+    .slots {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .slot-bar {
+      height: 6px;
+      width: 56px;
+      border-radius: 3px;
+      background: rgba(255,255,255,.2);
+      position: relative;
+      overflow: hidden;
+    }
+    .slot-bar::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--gold);
+      border-radius: 3px;
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform .35s cubic-bezier(.4,0,.2,1);
+    }
+    .slot-bar.on::after { transform: scaleX(1); }
+    .slot-label { font-size: .7rem; opacity: .65; letter-spacing: 1px; }
+
+    /* ── TABS ───────────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      border-top: 1px solid rgba(255,255,255,.15);
+    }
+    .tab-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      color: rgba(255,255,255,.55);
+      font-size: .82rem;
+      font-weight: 600;
+      letter-spacing: .5px;
+      padding: 10px 8px;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: color .2s, border-color .2s;
+    }
+    .tab-btn.active { color: #fff; border-bottom-color: var(--gold); }
+
+    /* ── CONTAINER ──────────────────────────────────────────── */
+    .tab-pane { display: none; }
+    .tab-pane.visible { display: block; }
+    .container { max-width: 560px; margin: 0 auto; padding: 14px 13px; }
+
+    .sec-label {
+      display: flex; align-items: center; gap: 11px;
+      font-family: var(--f-head); font-style: italic;
+      font-size: .82rem; color: var(--gold); font-weight: 700;
+      margin: 26px 0 13px;
+    }
+    .sec-label::before, .sec-label::after {
+      content: ''; flex: 1; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(156,123,48,.45), transparent);
+    }
+    .sec-label:first-child { margin-top: 6px; }
+
+    /* ── ENVELOPES (locked + unlockable) ────────────────────── */
+    .loc-locked, .loc-unlockable {
+      border-radius: 8px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* diagonal envelope-lining stripe on the left */
+    .loc-locked::before, .loc-unlockable::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0; width: 10px;
+      background: repeating-linear-gradient(
+        -45deg,
+        rgba(0,0,0,.1),   rgba(0,0,0,.1)   3px,
+        transparent       3px, transparent  9px
+      );
+      pointer-events: none;
+    }
+
+    .loc-locked {
+      background: linear-gradient(170deg, #e8dfc5 0%, #dfd5b5 100%);
+      border: 1px solid #c5b48a;
+      box-shadow: 0 2px 8px rgba(0,0,0,.1), inset 0 1px 0 rgba(255,255,255,.45);
+      opacity: .72;
+      padding: 14px 14px 14px 20px; gap: 12px;
+    }
+    .loc-unlockable {
+      background: linear-gradient(170deg, #f0e6c6 0%, #e6d9a8 100%);
+      border: 2px solid var(--gold);
+      box-shadow: 0 3px 18px rgba(156,123,48,.32);
+      padding: 14px 14px 14px 20px; gap: 12px;
+      animation: envPulse 2.2s ease-in-out infinite;
+    }
+    @keyframes envPulse {
+      0%,100% { box-shadow: 0 3px 14px rgba(156,123,48,.28); }
+      50%     { box-shadow: 0 4px 24px rgba(156,123,48,.52); }
+    }
+
+    .env-content { flex: 1; min-width: 0; }
+    .env-num {
+      font-size: .62rem; text-transform: uppercase;
+      letter-spacing: 1.8px; color: #8a7040; font-weight: 700; margin-bottom: 3px;
+    }
+    .env-num.gold { color: var(--gold); }
+    .env-heading {
+      font-family: var(--f-head); font-size: 1rem; font-weight: 700;
+      color: #1a1610; margin-bottom: 4px; line-height: 1.25;
+    }
+    .env-sub { font-size: .75rem; color: #8a7040; }
+    .env-sub.gold { color: var(--gold); font-weight: 600; }
+
+    /* Wax seal */
+    .env-seal {
+      width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+      background: radial-gradient(circle at 38% 35%, #c04030, #701c14);
+      color: #f5e4cc; font-family: var(--f-head);
+      font-size: .95rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 3px 10px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.18);
+      letter-spacing: -.5px;
+    }
+
+    .btn-env-open {
+      flex-shrink: 0;
+      background: var(--gold); color: #fff; border: none;
+      border-radius: 8px; padding: 10px 16px;
+      font-family: var(--f-body); font-size: .82rem; font-weight: 700;
+      cursor: pointer; transition: filter .15s;
+      box-shadow: 0 2px 6px rgba(0,0,0,.2);
+    }
+    .btn-env-open:active { filter: brightness(.88); }
+    .btn-env-open:disabled { background: #c5b48a; color: #a09070; cursor: not-allowed; }
+
+    /* ── LOCATION: ACTIVE ───────────────────────────────────── */
+    .loc-active {
+      background: var(--card);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 3px 14px rgba(30,77,58,.18);
+      margin-bottom: 14px;
+      animation: slideIn .25s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .loc-active-hd {
+      background: linear-gradient(135deg, #1c1813 0%, #0e0b08 100%);
+      color: #fff;
+      padding: 14px 18px;
+      position: relative; overflow: hidden;
+    }
+    /* decorative ring in corner */
+    .loc-active-hd::after {
+      content: ''; position: absolute;
+      top: -18px; right: -18px;
+      width: 80px; height: 80px; border-radius: 50%;
+      border: 2px solid rgba(156,123,48,.22); pointer-events: none;
+    }
+    .loc-active-hd .row1 {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: 4px;
+    }
+    .loc-active-hd .anum { font-size: .65rem; opacity: .55; letter-spacing: 1px; text-transform: uppercase; }
+    .loc-active-hd .adl  { font-size: .75rem; font-weight: 600; }
+    .loc-active-hd .adl.urgent { color: #f0a060; }
+    .loc-active-hd .atitle { font-family: var(--f-head); font-size: 1.12rem; font-weight: 700; letter-spacing: .2px; }
+
+    .loc-active-body {
+      padding: 16px 18px;
+      background-image: repeating-linear-gradient(
+        transparent, transparent 28px,
+        rgba(0,0,0,.025) 28px, rgba(0,0,0,.025) 29px
+      );
+    }
+    .dest-box {
+      background: #ede4cb;
+      border-left: 4px solid var(--gold);
+      border-radius: 0 6px 6px 0;
+      padding: 10px 13px;
+      margin-bottom: 14px;
+    }
+    .dest-box .dest-label { font-size: .68rem; text-transform: uppercase; letter-spacing: 1.5px; color: #7a5c1e; font-weight: 700; margin-bottom: 3px; }
+    .dest-box .dest-name  { font-weight: 700; font-size: .95rem; }
+    .dest-box .dest-addr  { font-size: .78rem; color: #666; margin-top: 2px; }
+
+    .loc-active-body p { margin-bottom: 10px; line-height: 1.65; font-size: .91rem; }
+    .loc-active-body ul,
+    .loc-active-body ol { padding-left: 20px; margin-bottom: 10px; font-size: .91rem; }
+    .loc-active-body li { margin-bottom: 4px; line-height: 1.5; }
+    .loc-active-body blockquote {
+      border-left: 3px solid #ccc;
+      padding-left: 12px;
+      color: #555;
+      font-style: italic;
+      margin: 8px 0 10px;
+      font-size: .88rem;
+    }
+    .task-note { font-size: .8rem !important; color: #999 !important; }
+    .penalty-strip {
+      background: var(--rl);
+      border-left: 3px solid var(--red);
+      border-radius: 0 5px 5px 0;
+      padding: 9px 12px;
+      font-size: .83rem;
+      color: #c0392b;
+      margin: 4px 0 8px;
+    }
+
+    .act-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 10px 16px 16px;
+    }
+    .btn-done { background: var(--ok);  color: #fff; }
+    .btn-fail { background: var(--red); color: #fff; }
+    .btn-done, .btn-fail {
+      padding: 13px 8px;
+      border: none;
+      border-radius: 10px;
+      font-size: .93rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: filter .15s;
+    }
+    .btn-done:active, .btn-fail:active { filter: brightness(.88); }
+
+    /* ── LOCATION: COMPLETED ────────────────────────────────── */
+    .loc-done {
+      background: var(--card);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .loc-done-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      cursor: pointer;
+    }
+    .sdot {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .88rem;
+      flex-shrink: 0;
+    }
+    .sdot.done   { background: var(--okl); color: var(--ok); }
+    .sdot.failed { background: var(--rl);  color: var(--red); }
+    .loc-done-row .di { flex: 1; }
+    .loc-done-row .dtitle { font-size: .88rem; font-weight: 600; }
+    .loc-done-row .dmeta  { font-size: .72rem; color: #bbb; margin-top: 2px; }
+    .loc-done-row .dchevron { font-size: .7rem; color: #ccc; transition: transform .2s; }
+    .loc-done-row.open .dchevron { transform: rotate(180deg); }
+
+    .loc-done-detail {
+      display: none;
+      padding: 0 14px 14px;
+      border-top: 1px solid #f0f0f0;
+    }
+    .loc-done-detail.visible { display: block; }
+    .loc-done-detail p { margin-top: 10px; font-size: .88rem; line-height: 1.6; color: #444; }
+    .loc-done-detail ul,
+    .loc-done-detail ol { padding-left: 20px; margin: 6px 0; font-size: .88rem; color: #444; }
+    .loc-done-detail li { margin-bottom: 3px; }
+    .loc-done-detail blockquote {
+      border-left: 3px solid #ccc;
+      padding-left: 10px;
+      font-style: italic;
+      color: #666;
+      font-size: .85rem;
+      margin: 8px 0;
+    }
+    .loc-done-detail .dest-box { margin-top: 10px; }
+
+    /* ── BONUS: same as JGA_Bonus_App ──────────────────────── */
+    .max-banner {
+      background: #f0e8d0;
+      border: 1px solid #b8962a;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: .82rem;
+      color: #8a6000;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .no-active {
+      border: 2px dashed #c8bfb0;
+      border-radius: 12px;
+      padding: 22px 16px;
+      text-align: center;
+      color: #bbb;
+      font-size: .88rem;
+      margin-bottom: 8px;
+    }
+    .bon-active {
+      background: var(--card);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 3px 14px rgba(30,77,58,.18);
+      margin-bottom: 14px;
+      animation: slideIn .25s ease;
+    }
+    .bon-active-hd {
+      background: linear-gradient(135deg, #1c1813 0%, #0e0b08 100%);
+      color: #fff; padding: 13px 18px;
+      position: relative; overflow: hidden;
+    }
+    .bon-active-hd::after {
+      content: ''; position: absolute;
+      top: -18px; right: -18px; width: 80px; height: 80px;
+      border-radius: 50%; border: 2px solid rgba(156,123,48,.2);
+      pointer-events: none;
+    }
+    .bon-active-hd .row1 {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: 4px;
+    }
+    .bon-active-hd .bid   { font-size: .65rem; opacity: .55; letter-spacing: 1px; text-transform: uppercase; }
+    .bon-active-hd .bmeta { font-size: .73rem; opacity: .82; }
+    .bon-active-hd .btitle { font-family: var(--f-head); font-size: 1.08rem; font-weight: 700; letter-spacing: .2px; }
+    .bon-timer {
+      display: inline-flex; align-items: center; gap: 5px;
+      margin-top: 7px; padding: 3px 11px; border-radius: 20px;
+      font-size: .78rem; font-weight: 700; letter-spacing: .3px;
+      font-variant-numeric: tabular-nums;
+      background: rgba(255,255,255,.13);
+      color: rgba(255,255,255,.8);
+      border: 1px solid rgba(255,255,255,.18);
+    }
+    .bon-timer.urgent {
+      background: rgba(220,120,50,.25);
+      color: #f5b070;
+      border-color: rgba(220,120,50,.4);
+      animation: timerPulse .85s ease-in-out infinite;
+    }
+    .bon-timer.expired {
+      background: rgba(160,50,40,.3);
+      color: #ff9080;
+      border-color: rgba(160,50,40,.45);
+    }
+    @keyframes timerPulse {
+      0%,100% { opacity: 1; } 50% { opacity: .55; }
+    }
+    .toast-expired { background: #2a1010 !important; border: 1px solid rgba(140,53,39,.45); }
+
+    .bon-active-body { padding: 14px 16px 4px; }
+    .bon-active-body p  { margin-bottom: 10px; line-height: 1.65; font-size: .91rem; }
+    .bon-active-body ul,
+    .bon-active-body ol { padding-left: 20px; margin-bottom: 10px; font-size: .91rem; }
+    .bon-active-body li { margin-bottom: 4px; line-height: 1.5; }
+    .bon-active-body blockquote {
+      border-left: 3px solid #ccc; padding-left: 12px;
+      color: #555; font-style: italic; margin: 8px 0 10px; font-size: .88rem;
+    }
+
+    .locked-row {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+      transition: opacity .2s;
+    }
+    .locked-row.dimmed { opacity: .4; pointer-events: none; }
+    .locked-row .linfo { flex: 1; min-width: 0; }
+    .locked-row .ltitle { font-weight: 600; font-size: .92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .locked-row .lmeta  { font-size: .74rem; color: #aaa; margin-top: 5px; display: flex; align-items: center; gap: 8px; }
+
+    /* ── POINTS BADGE ────────────────────────────────────────── */
+    .pts-badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 2px 9px; border-radius: 20px;
+      font-size: .7rem; font-weight: 700; letter-spacing: .2px;
+      background: rgba(156,123,48,.13);
+      color: var(--gold);
+      border: 1px solid rgba(156,123,48,.32);
+      flex-shrink: 0;
+    }
+    .pts-badge-dk {  /* on dark card header */
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 2px 9px; border-radius: 20px;
+      font-size: .7rem; font-weight: 700;
+      background: rgba(255,255,255,.13);
+      color: #f0d898;
+      border: 1px solid rgba(255,255,255,.22);
+    }
+    .time-badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 2px 9px; border-radius: 20px;
+      font-size: .7rem; font-weight: 600;
+      background: rgba(26,22,16,.07);
+      color: #6b5840;
+      border: 1px solid rgba(26,22,16,.13);
+      flex-shrink: 0;
+    }
+    .time-badge-dk {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 2px 9px; border-radius: 20px;
+      font-size: .7rem; font-weight: 600;
+      background: rgba(255,255,255,.1);
+      color: rgba(255,255,255,.7);
+      border: 1px solid rgba(255,255,255,.16);
+      flex-shrink: 0;
+    }
+    .deadline-badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 2px 9px; border-radius: 20px;
+      font-size: .68rem; font-weight: 700;
+      background: rgba(140,53,39,.1);
+      color: var(--red);
+      border: 1px solid rgba(140,53,39,.25);
+      flex-shrink: 0;
+    }
+    .env-badges { margin-top: 7px; display: flex; gap: 6px; flex-wrap: wrap; }
+
+    /* ── FAIL PENALTY (after bonus task failed) ──────────────── */
+    .fail-penalty {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: var(--rl);
+      border-left: 3px solid var(--red);
+      border-radius: 0 6px 6px 0;
+      font-size: .78rem; font-weight: 600;
+      color: var(--red); line-height: 1.45;
+    }
+    .btn-open {
+      flex-shrink: 0;
+      padding: 8px 15px;
+      background: var(--green);
+      color: #fff; border: none; border-radius: 8px;
+      font-size: .82rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-open:active { filter: brightness(.85); }
+
+    .done-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px;
+      background: var(--card); border-radius: 9px; margin-bottom: 7px;
+    }
+    .done-row .dinfo { flex: 1; }
+    .done-row .dtitle { font-size: .88rem; font-weight: 500; }
+    .done-row .dmeta  { font-size: .72rem; color: #bbb; }
+    .done-row .dstatus { font-size: .72rem; font-weight: 700; }
+    .done-row.done   .dstatus { color: var(--ok); }
+    .done-row.failed .dstatus { color: var(--red); }
+    .done-row.failed { align-items: flex-start; }
+    .done-row.failed .sdot { margin-top: 2px; }
+
+    /* ── MODALS ─────────────────────────────────────────────── */
+    .backdrop {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.45); z-index: 300;
+      align-items: flex-end; justify-content: center;
+    }
+    .backdrop.open { display: flex; }
+    .sheet {
+      background: #f2ede3; border-radius: 22px 22px 0 0;
+      padding: 10px 18px 36px; width: 100%; max-width: 560px;
+      animation: sheetUp .2s ease;
+    }
+    @keyframes sheetUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    .drag { width: 38px; height: 4px; background: #ddd; border-radius: 2px; margin: 8px auto 18px; }
+    .sheet h3 { font-size: 1.05rem; margin-bottom: 6px; }
+    .sheet .smeta { font-size: .78rem; color: #aaa; margin-bottom: 14px; }
+    .sheet p { font-size: .88rem; color: #555; line-height: 1.55; margin-bottom: 18px; }
+    .fail-box {
+      background: var(--rl); border-radius: 8px;
+      padding: 11px 13px; font-size: .85rem; color: #c0392b;
+      margin-bottom: 16px; display: none;
+    }
+    .mbtn-row { display: flex; gap: 10px; }
+    .mbtn-row button {
+      flex: 1; padding: 13px; border: none;
+      border-radius: 10px; font-size: .9rem; font-weight: 700; cursor: pointer;
+    }
+    .mbtn-cancel  { background: #e4ddd1; color: #5a5040; }
+    .mbtn-confirm { background: var(--green); color: #fff; }
+    .mbtn-danger  { background: var(--red);   color: #fff; }
+
+    /* shot state (failed + Jägermeister getrunken) */
+    .sdot.shot { background: #fff3cd; color: #a07000; }
+    .btn-shot {
+      flex-shrink: 0;
+      background: #e67e22;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 11px;
+      font-size: .78rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-shot:active { filter: brightness(.88); }
+
+    /* ── TUTORIAL ────────────────────────────────────────────── */
+    /* Overlay: transparent click-blocker only, no stacking context for children */
+    .tutorial-overlay {
+      position: fixed; inset: 0;
+      background: transparent;
+      z-index: 800; pointer-events: all;
+    }
+    .tutorial-overlay.hidden { display: none; }
+
+    /* Ring: separate fixed element – spotlight + dim via box-shadow */
+    .tutorial-ring {
+      position: fixed; z-index: 802;
+      border: 3px solid var(--gold);
+      border-radius: 12px;
+      box-shadow: 0 0 0 8px rgba(156,123,48,.2),
+                  0 0 0 9999px rgba(0,0,0,.72);
+      pointer-events: none;
+      animation: tutRingIn .35s cubic-bezier(.34,1.56,.64,1);
+    }
+    .tutorial-ring.hidden { display: none; }
+    @keyframes tutRingIn {
+      from { opacity:.3; box-shadow: 0 0 0 18px rgba(156,123,48,.1), 0 0 0 9999px rgba(0,0,0,.72); }
+      to   { opacity:1;  box-shadow: 0 0 0 8px  rgba(156,123,48,.2), 0 0 0 9999px rgba(0,0,0,.72); }
+    }
+
+    /* Tooltip: separate fixed element above ring */
+    .tutorial-tooltip {
+      position: fixed; left: 16px; right: 16px;
+      background: var(--card);
+      border-radius: 16px; padding: 18px 20px 14px;
+      box-shadow: 0 8px 36px rgba(0,0,0,.45);
+      z-index: 803;
+      border-top: 3px solid var(--gold);
+      animation: tutTooltipIn .3s ease;
+    }
+    .tutorial-tooltip.hidden { display: none; }
+    @keyframes tutTooltipIn {
+      from { opacity:0; transform:translateY(6px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .tutorial-tooltip h4 {
+      font-family: var(--f-head); font-size: 1rem; font-weight: 700;
+      color: #1a1610; margin-bottom: 7px;
+    }
+    .tutorial-tooltip p {
+      font-size: .86rem; color: #5a5040; line-height: 1.6; margin-bottom: 16px;
+    }
+    .tutorial-footer {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    }
+    .tutorial-step-ind { font-size: .68rem; color: #bba880; font-weight: 600; flex-shrink: 0; }
+    .tutorial-skip     { font-size: .72rem; color: #bbb; background: none; border: none; cursor: pointer; padding: 4px; }
+    .tutorial-next {
+      background: var(--green); color: #fff; border: none;
+      border-radius: 9px; padding: 10px 20px;
+      font-size: .88rem; font-weight: 700; cursor: pointer;
+      font-family: var(--f-body); flex-shrink: 0; transition: filter .15s;
+    }
+    .tutorial-next:active { filter: brightness(.88); }
+    .tutorial-next.last { background: var(--gold); }
+
+    /* ── INTRO ───────────────────────────────────────────────── */
+    .intro-overlay {
+      position: fixed; inset: 0; background: #000;
+      z-index: 700; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 48px 36px; cursor: pointer; user-select: none;
+    }
+    .intro-overlay.hidden { display: none; }
+
+    .intro-skip {
+      position: absolute; top: 18px; right: 18px;
+      background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.22);
+      color: rgba(255,255,255,.75); font-size: .75rem;
+      padding: 7px 14px; border-radius: 7px; cursor: pointer;
+      letter-spacing: .3px; font-weight: 500;
+    }
+    .intro-skip:active { background: rgba(255,255,255,.25); }
+
+    .intro-content { max-width: 340px; width: 100%; }
+
+    .intro-text {
+      color: #fff; font-size: 1.12rem; line-height: 1.9;
+      min-height: 130px;
+    }
+    .intro-line { display: block; }
+    .intro-line + .intro-line { margin-top: 6px; }
+    .intro-cursor {
+      display: inline-block; width: 2px; height: 1em;
+      background: #fff; margin-left: 3px; vertical-align: text-bottom;
+      animation: cursorBlink .65s step-end infinite;
+    }
+    @keyframes cursorBlink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    .intro-hint {
+      margin-top: 48px; color: rgba(255,255,255,.3);
+      font-size: .7rem; letter-spacing: 1.5px;
+      text-transform: uppercase;
+      animation: hintBlink 1.6s ease-in-out infinite;
+    }
+    @keyframes hintBlink { 0%,100%{opacity:.3} 50%{opacity:.75} }
+
+    .intro-start {
+      margin-top: 48px; display: none;
+    }
+    .intro-start button {
+      background: #fff; color: #000;
+      border: none; border-radius: 12px;
+      padding: 15px 36px; font-size: 1rem;
+      font-weight: 700; cursor: pointer; letter-spacing: .3px;
+      transition: transform .12s;
+    }
+    .intro-start button:active { transform: scale(.96); }
+
+    /* ── FAB ────────────────────────────────────────────────── */
+    body { padding-bottom: 88px; }
+    .fab-belt {
+      position: fixed; bottom: 22px; right: 16px;
+      width: 54px; height: 54px; border-radius: 50%;
+      background: var(--green); color: #fff;
+      font-size: 1.4rem; border: none; cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,.28);
+      z-index: 150; display: flex; align-items: center; justify-content: center;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .fab-belt:active { transform: scale(.91); }
+    .fab-badge {
+      position: absolute; top: -3px; right: -3px;
+      background: var(--red); color: #fff;
+      font-size: .62rem; font-weight: 800;
+      min-width: 19px; height: 19px; border-radius: 10px;
+      display: none; align-items: center; justify-content: center;
+      padding: 0 4px; border: 2px solid var(--bg);
+    }
+    .fab-badge.on { display: flex; }
+
+    /* ── BELT OVERLAY ────────────────────────────────────────── */
+    .belt-overlay {
+      display: none; position: fixed; inset: 0;
+      background: var(--bg);
+      background-image: radial-gradient(ellipse 90% 50% at 15% 30%, rgba(180,148,80,.09) 0%, transparent 65%);
+      z-index: 250; overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .belt-overlay.open { display: block; }
+    .belt-ov-hdr {
+      background: var(--green); color: #fff;
+      padding: 14px 16px 16px;
+      display: flex; align-items: center; gap: 12px;
+      position: sticky; top: 0; z-index: 1;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+    .belt-ov-hdr h2 { flex: 1; font-size: 1.05rem; font-weight: 700; margin: 0; }
+    .btn-close-belt {
+      background: rgba(255,255,255,.18); border: none; color: #fff;
+      border-radius: 8px; padding: 7px 13px;
+      font-size: .82rem; font-weight: 600; cursor: pointer;
+    }
+    .btn-close-belt:active { background: rgba(255,255,255,.3); }
+
+    .belt-pts-card {
+      margin: 14px 14px 6px; background: var(--card);
+      border-radius: 14px; padding: 15px 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.07);
+    }
+    .belt-pts-card-lbl {
+      font-size: .68rem; text-transform: uppercase;
+      letter-spacing: 1.8px; color: #aaa; font-weight: 700; margin-bottom: 10px;
+    }
+    .belt-track { height: 8px; background: #d5cec3; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+    .belt-track-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--green) 0%, var(--gold) 100%);
+      border-radius: 4px; min-width: 4px;
+      transition: width .5s cubic-bezier(.4,0,.2,1);
+    }
+    .belt-pts-row { display: flex; justify-content: space-between; font-size: .8rem; color: #888; }
+    .belt-pts-row strong { color: #1a1610; }
+
+    .belt-list-wrap { padding: 4px 14px 24px; }
+
+    .belt-item {
+      background: var(--card); border-radius: 13px;
+      padding: 13px 15px; margin-bottom: 9px;
+      display: flex; align-items: center; gap: 13px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+      border: 2px solid transparent;
+      transition: opacity .2s, border-color .2s;
+    }
+    .belt-item.locked { opacity: .35; }
+    .belt-item.is-current { border-color: var(--gold); box-shadow: 0 2px 14px rgba(156,123,48,.24); }
+    .belt-item.new-unlock { border-color: var(--ok); animation: beltPop .45s cubic-bezier(.34,1.56,.64,1); }
+    @keyframes beltPop {
+      0%  { transform: scale(1); }
+      45% { transform: scale(1.03); }
+      100%{ transform: scale(1); }
+    }
+    .belt-emoji { font-size: 1.8rem; flex-shrink: 0; line-height: 1; }
+    .belt-item-info { flex: 1; min-width: 0; }
+    .belt-item-name { font-weight: 700; font-size: .95rem; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+    .belt-tag {
+      font-size: .6rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .7px; padding: 2px 7px; border-radius: 5px;
+    }
+    .belt-tag.cur { background: #fff3cd; color: #8a6000; }
+    .belt-tag.neu { background: #d4edda; color: #155724; }
+    .belt-item-req { font-size: .75rem; color: #bbb; margin-top: 3px; }
+    .belt-item-req.done { color: var(--ok); }
+    .belt-status-icon { font-size: 1rem; flex-shrink: 0; }
+
+    /* ── ACHIEVEMENT TOAST ───────────────────────────────────── */
+    .toast-wrap {
+      position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+      z-index: 500; display: flex; flex-direction: column; align-items: stretch;
+      gap: 8px; pointer-events: none;
+      width: calc(100% - 28px); max-width: 380px;
+    }
+    .toast {
+      background: #1c1c1e; color: #fff; border-radius: 16px;
+      padding: 12px 16px; display: flex; align-items: center; gap: 13px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.4);
+      animation: toastIn .38s cubic-bezier(.34,1.56,.64,1);
+    }
+    .toast.out { animation: toastOut .28s ease forwards; }
+    @keyframes toastIn  { from { opacity:0; transform:translateY(-16px) scale(.9); } to { opacity:1; transform:translateY(0) scale(1); } }
+    @keyframes toastOut { from { opacity:1; transform:translateY(0); } to { opacity:0; transform:translateY(-10px); } }
+    .toast-icon { font-size: 1.6rem; flex-shrink: 0; }
+    .toast-body { flex: 1; }
+    .toast-lbl  { font-size: .7rem; opacity: .6; margin-bottom: 1px; }
+    .toast-name { font-size: 1rem; font-weight: 700; }
+
+    /* ── PENALTY POPUP ───────────────────────────────────────── */
+    .penalty-sheet { border-top: 4px solid var(--red) !important; }
+    .penalty-hdr { text-align: center; margin-bottom: 20px; }
+    .penalty-hdr-icon { font-size: 2.6rem; display: block; margin-bottom: 8px; }
+    .penalty-hdr h3 { font-family: var(--f-head); font-size: 1.12rem; color: var(--red); font-weight: 700; }
+    .penalty-popup-body {
+      background: var(--rl);
+      border-left: 4px solid var(--red);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 16px;
+      font-size: .95rem; font-weight: 600;
+      color: var(--red); line-height: 1.55;
+      margin-bottom: 22px;
+    }
+    .penalty-confirm {
+      width: 100%; padding: 14px;
+      background: var(--red); color: #fff;
+      border: none; border-radius: 10px;
+      font-size: .95rem; font-weight: 700;
+      cursor: pointer; font-family: var(--f-body);
+    }
+    .penalty-confirm:active { filter: brightness(.88); }
+
+    /* ── UTIL ───────────────────────────────────────────────── */
+    .reset-area { text-align: center; margin-top: 32px; }
+    .btn-reset { font-size: .7rem; color: #ccc; background: none; border: none; cursor: pointer; padding: 8px 16px; }
+    .debug-bar {
+      background: var(--gold); color: #fff;
+      font-size: .72rem; font-weight: 700; text-align: center;
+      padding: 4px 8px; letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- DEBUG BAR (only shown when ?zeit= is set) -->
+<div class="debug-bar" id="debug-bar" style="display:none">
+  ⚙️ DEBUG-MODUS · Simulierte Uhrzeit: <span id="debug-time-label"></span>
+</div>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-row1">
+    <div class="hdr-title">🥋 JGA Prag</div>
+    <div class="hdr-clock" id="clock">--:--</div>
+  </div>
+  <div class="next-hint" id="next-hint"></div>
+  <div class="slots">
+    <div class="slot-bar" id="slot1"></div>
+    <div class="slot-bar" id="slot2"></div>
+    <div class="slot-label" id="slot-label">0 / 2 aktiv</div>
+  </div>
+  <nav class="tabs">
+    <button class="tab-btn active" id="tab-btn-prog"  onclick="switchTab('prog')">🗺 Programm</button>
+    <button class="tab-btn"        id="tab-btn-bonus" onclick="switchTab('bonus')">🎯 Bonus</button>
+  </nav>
+</div>
+
+<!-- TAB: PROGRAMM -->
+<div class="tab-pane visible" id="pane-prog">
+  <div class="container">
+    <div id="prog-root"></div>
+    <div class="reset-area">
+      <button class="btn-reset" onclick="showModal('reset-modal')">⟳ zurücksetzen</button>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: BONUS -->
+<div class="tab-pane" id="pane-bonus">
+  <div class="container">
+    <div id="bonus-root"></div>
+    <div class="reset-area">
+      <button class="btn-reset" onclick="showModal('reset-modal')">⟳ zurücksetzen</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Envelope öffnen -->
+<div class="backdrop" id="env-modal">
+  <div class="sheet">
+    <div class="drag"></div>
+    <h3 id="em-title"></h3>
+    <div class="smeta" id="em-meta"></div>
+    <p>Sobald du öffnest, wird der Inhalt sichtbar und die Aufgabe zählt als aktiv.</p>
+    <div class="mbtn-row">
+      <button class="mbtn-cancel" onclick="hideModal('env-modal')">Abbrechen</button>
+      <button class="mbtn-confirm" id="em-btn">Öffnen</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Bonus öffnen -->
+<div class="backdrop" id="open-modal">
+  <div class="sheet">
+    <div class="drag"></div>
+    <h3 id="om-title"></h3>
+    <div class="smeta" id="om-meta"></div>
+    <p>Sobald du öffnest, zählt diese Aufgabe als aktiv. Sie bleibt aktiv bis du sie abschließt oder aufgibst.</p>
+    <div class="mbtn-row">
+      <button class="mbtn-cancel" onclick="hideModal('open-modal')">Abbrechen</button>
+      <button class="mbtn-confirm" id="om-btn">Öffnen</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Gescheitert -->
+<div class="backdrop" id="fail-modal">
+  <div class="sheet">
+    <div class="drag"></div>
+    <h3>Aufgabe gescheitert?</h3>
+    <p>Das lässt sich nicht rückgängig machen.</p>
+    <div class="fail-box" id="fail-box"></div>
+    <div class="mbtn-row">
+      <button class="mbtn-cancel" onclick="hideModal('fail-modal')">Zurück</button>
+      <button class="mbtn-danger" id="fail-btn">Gescheitert</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Strafshot (nach Bonus-Scheitern) -->
+<div class="backdrop" id="penalty-modal">
+  <div class="sheet penalty-sheet">
+    <div class="drag"></div>
+    <div class="penalty-hdr">
+      <span class="penalty-hdr-icon">💀</span>
+      <h3>Aufgabe nicht bestanden</h3>
+    </div>
+    <div class="penalty-popup-body" id="penalty-popup-body"></div>
+    <button class="penalty-confirm" id="penalty-confirm-btn">🥃 &nbsp;Strafshot akzeptiert</button>
+  </div>
+</div>
+
+<!-- MODAL: Reset -->
+<div class="backdrop" id="reset-modal">
+  <div class="sheet">
+    <div class="drag"></div>
+    <h3>Alles zurücksetzen?</h3>
+    <p>Alle Aufgaben, Punkte und Gürtelfortschritt werden zurückgesetzt. Intro und Tutorial erscheinen beim nächsten Öffnen erneut.</p>
+    <div class="mbtn-row">
+      <button class="mbtn-cancel" onclick="hideModal('reset-modal')">Abbrechen</button>
+      <button class="mbtn-danger" onclick="doReset()">Zurücksetzen</button>
+    </div>
+  </div>
+</div>
+
+<!-- TUTORIAL: click-blocker overlay (transparent) -->
+<div class="tutorial-overlay hidden" id="tutorial-overlay"></div>
+<!-- TUTORIAL: spotlight ring (separate fixed element, own z-index) -->
+<div class="tutorial-ring hidden" id="tutorial-ring"></div>
+<!-- TUTORIAL: tooltip (separate fixed element, own z-index) -->
+<div class="tutorial-tooltip hidden" id="tutorial-tooltip">
+  <h4 id="tutorial-title"></h4>
+  <p  id="tutorial-text"></p>
+  <div class="tutorial-footer">
+    <span class="tutorial-step-ind" id="tutorial-step-ind"></span>
+    <button class="tutorial-skip" onclick="closeTutorial()">Überspringen</button>
+    <button class="tutorial-next" id="tutorial-next" onclick="tutorialNext()">Weiter →</button>
+  </div>
+</div>
+
+<!-- INTRO OVERLAY -->
+<div class="intro-overlay" id="intro-overlay" onclick="introTap()">
+  <button class="intro-skip" onclick="event.stopPropagation(); skipIntro()">Überspringen</button>
+  <div class="intro-content">
+    <div class="intro-text" id="intro-text"></div>
+    <div class="intro-hint" id="intro-hint">Tippe um zu beginnen</div>
+    <div class="intro-start" id="intro-start">
+      <button onclick="event.stopPropagation(); closeIntro()">🥋 &nbsp;Los geht's</button>
+    </div>
+  </div>
+</div>
+
+<!-- FAB: Gürtel-Übersicht -->
+<button class="fab-belt" id="fab-belt" onclick="openBeltPage()">
+  🥋<span class="fab-badge" id="fab-badge"></span>
+</button>
+
+<!-- BELT OVERLAY -->
+<div class="belt-overlay" id="belt-overlay">
+  <div class="belt-ov-hdr">
+    <h2>🏆 Gürtelprogression</h2>
+    <button class="btn-close-belt" onclick="closeBeltPage()">✕ Schließen</button>
+  </div>
+  <div class="belt-pts-card">
+    <div class="belt-pts-card-lbl">Bonus-Punkte</div>
+    <div class="belt-track"><div class="belt-track-fill" id="belt-bar-fill" style="width:0%"></div></div>
+    <div class="belt-pts-row">
+      <span id="belt-bar-pts"><strong>0</strong> / 255 Pkt</span>
+      <span id="belt-bar-pct">0 %</span>
+    </div>
+  </div>
+  <div class="belt-list-wrap" id="belt-list"></div>
+</div>
+
+<!-- ACHIEVEMENT TOASTS -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ── TIME ───────────────────────────────────────────────────────────────────────
+// Test with: JGA_App.html?zeit=12:35
+
+const URL_ZEIT = new URLSearchParams(location.search).get('zeit');
+
+function getNowMins() {
+  if (URL_ZEIT) {
+    const [h, m] = URL_ZEIT.split(':').map(Number);
+    return h * 60 + (m || 0);
+  }
+  const n = new Date();
+  return n.getHours() * 60 + n.getMinutes();
+}
+
+function getNowStr() {
+  if (URL_ZEIT) return URL_ZEIT;
+  const n = new Date();
+  return String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+}
+
+function parseMins(str) {    // "11:30" → 690
+  const [h, m] = str.split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+
+function fmtCountdown(mins) {
+  if (mins <= 0) return '0 Min';
+  if (mins < 60) return `${mins} Min`;
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
+// ── STATE ──────────────────────────────────────────────────────────────────────
+// localStorage key includes today's date → fresh state each calendar day
+
+const TODAY = new Date().toISOString().slice(0, 10);
+const S_KEY = `jga-app-${TODAY}`;
+let S = {};
+
+function loadState() {
+  try { S = JSON.parse(localStorage.getItem(S_KEY) || '{}'); } catch(e) { S = {}; }
+  [...LOC_TASKS, ...BONUS_TASKS].forEach(t => { if (!S[t.id]) S[t.id] = 'initial'; });
+}
+function save() { localStorage.setItem(S_KEY, JSON.stringify(S)); }
+
+// Count ALL active tasks (location + bonus combined)
+function activeCount() {
+  return [...LOC_TASKS, ...BONUS_TASKS].filter(t => S[t.id] === 'active').length;
+}
+// Is any location task currently active?
+function locActive() {
+  return LOC_TASKS.some(t => S[t.id] === 'active');
+}
+
+// ── BONUS TIMER ───────────────────────────────────────────────────────────────
+function parseBonusMins(t) { return parseInt(t.time); }
+
+function bonusRemainingMs(t) {
+  const start = S[t.id + '_start'];
+  if (!start) return null;
+  return (start + parseBonusMins(t) * 60000) - Date.now();
+}
+
+function fmtTimer(ms) {
+  const secs = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+}
+
+// True while any location task is failed but shot not yet drunk
+function hasPendingShot() {
+  return LOC_TASKS.some(t => S[t.id] === 'failed');
+}
+
+// ── BELT HELPERS ──────────────────────────────────────────────────────────────
+// 'done' or 'shot' (failed but Jägermeister drunk) both satisfy belt prerequisite
+function locPassed(id) { return S[id] === 'done' || S[id] === 'shot'; }
+
+function bonusPoints() {
+  return BONUS_TASKS.filter(t => S[t.id] === 'done').reduce((s, t) => s + t.pts, 0);
+}
+
+function currentBeltIdx() {
+  const bp = bonusPoints();
+  let idx = 0;
+  for (let i = 1; i < BELTS.length; i++) {
+    const b = BELTS[i];
+    if ((b.locId === null || locPassed(b.locId)) && bp >= b.pts) idx = i;
+    else break;
+  }
+  return idx;
+}
+
+// ── DATA: LOCATION TASKS ───────────────────────────────────────────────────────
+
+const LOC_TASKS = [
+  {
+    id: 'L1', num: 1,
+    outerTitle: 'Der Schüler grüßt',
+    openTime: '11:00', deadline: '11:30', window: '30 Min',
+    evening: false,
+    destination: 'Náplavka Bauernmarkt',
+    address: 'Rašínovo nábřeží, Praha 2',
+    body: `<p>Du stehst am Moldauufer. Vor dir: Stände, Händler, Prag erwacht.</p>
+      <p><strong>Deine Aufgabe:</strong> Kaufe irgendetwas an einem Stand. Beim Bezahlen verbeugst du dich tief – Karate-Verbeugung, voller Ernst – und sagst dabei laut:</p>
+      <blockquote>„Für die Energie des Kampfes."</blockquote>
+      <p class="task-note">📸 Foto mit dem Standbesitzer beim Kauf als Beweis.</p>`,
+    penalty: 'Strafshot Jägermeister. Der Meister kauft trotzdem – aber ohne Würde.'
+  },
+  {
+    id: 'L2', num: 2,
+    outerTitle: 'All You Need Is Love',
+    openTime: '11:30', deadline: '12:30', window: '60 Min',
+    evening: false,
+    destination: 'John Lennon Wall',
+    address: 'Velkopřevorské náměstí, Malá Strana',
+    body: `<p>Eine Wand voller Liebe, Farbe und Botschaften. Jetzt kommt deine dazu.</p>
+      <p><strong>Deine Aufgabe:</strong> Schreibe ein Liebesgedicht an die Wand – mindestens 4 Zeilen, mit dem Namen der Braut. Stil frei, Herz Pflicht.</p>
+      <p class="task-note">📸 Foto vom fertigen Gedicht an der Wand als Beweis.</p>`,
+    penalty: 'Strafshot Jägermeister. Keine Punkte. Prag hat es gesehen.'
+  },
+  {
+    id: 'L3', num: 3,
+    outerTitle: 'Lord Shen',
+    openTime: '12:30', deadline: '13:00', window: '30 Min',
+    evening: false,
+    destination: 'Wallenstein Palastgarten',
+    address: 'Letenská 4, Malá Strana · Eintritt frei',
+    body: `<p>In diesen Gärten lauert ein Feind. Geckenhaft. Farbenprächtig. Unberechenbar.</p>
+      <p>Der <strong>Pfau</strong>.</p>
+      <p><strong>Deine Aufgabe:</strong> Finde einen Pfau und stelle dich ihm zum Duell. Nimm deine kampfbereiteste Karate-Pose ein und halte sie – würdevoll und ruhig – für das Foto.</p>
+      <ul>
+        <li>Kein Berühren des Pfaus</li>
+        <li>Kein Erschrecken oder Anschreien</li>
+        <li>Volle Würde – das ist ein ehrenhaftes Duell</li>
+      </ul>
+      <p class="task-note">📸 Foto mit Pfau im Bild als Beweis.</p>`,
+    penalty: 'Strafshot Jägermeister. Lord Shen lacht. Schämst du dich?'
+  },
+  {
+    id: 'L4', num: 4,
+    outerTitle: 'Na zdraví!',
+    openTime: '13:00', deadline: '14:00', window: '60 Min',
+    evening: false,
+    destination: 'Letná Biergarten',
+    address: 'Letenské sady 341, Praha 7 · ab 11:00 Uhr',
+    body: `<p>Hoch über der Stadt, Panoramablick auf Prag. Du hast dir die Beine hochgelaufen. Jetzt der Kampf.</p>
+      <p><strong>Deine Aufgabe:</strong> Finde einen fremden Tisch mit mindestens 2 Personen, setze dich kurz dazu und stoße mit ihnen auf deine Hochzeit an.</p>
+      <ol>
+        <li>Wähle einen Tisch mit Fremden</li>
+        <li>Frage höflich, ob du kurz dazusitzen darfst</li>
+        <li>Erkläre (Englisch oder Zeichensprache), dass du JGA feierst</li>
+        <li>Bestelle eine Runde und stoße an</li>
+        <li>Sage dabei laut: <strong>„Na zdraví! Auf die Liebe, auf Prag – und auf die Hochzeit!"</strong></li>
+      </ol>
+      <p class="task-note">📸 Foto mit den Tischgenossen beim Anstoßen · 🚌 Tram zurück ca. 15:30 (Linie 1 oder 25)</p>`,
+    penalty: 'Strafshot Jägermeister. Die Prager trinken weiter. Ohne dich.'
+  },
+  {
+    id: 'L5', num: 5,
+    outerTitle: 'Zu Befehl, Soldat!',
+    openTime: '17:00', deadline: null, window: '10 Min',
+    evening: true,
+    destination: 'My People Bar',
+    address: 'Michalská 970/20, Staré Město',
+    body: `<p>Der Tag neigt sich. Aber der Meister ruht nicht.</p>
+      <p><strong>Deine Aufgabe:</strong> Betritt die My People Bar und wähle einen Drink aus der Karte der <strong>Extreme Cocktails</strong>.</p>
+      <p>Der Tank Shot steht auch zur Verfügung – falls du dich traust. Die Wahl liegt bei dir. Aber weiche nicht aus.</p>`,
+    penalty: 'Strafshot Jägermeister. Kein Meister war je feige.'
+  },
+  {
+    id: 'L6', num: 6,
+    outerTitle: 'Der letzte Kampf',
+    openTime: '17:00', deadline: null, window: '30 Min',
+    evening: true,
+    destination: 'Joystick Arcade Bar',
+    address: 'Jindřišská 5, Nové Město',
+    body: `<p>Du hast dich verbeuge vor Standbesitzern. Du hast Liebesgedichte an Wände geschrieben. Du hast einem Pfau ins Auge gesehen. Du hast mit Fremden auf deine Hochzeit angestoßen.</p>
+      <p><strong>Jetzt steht der finale Kampf bevor. Doch dieser Kampf ist kein Kampf gegen andere – es ist ein Kampf gegen dich selbst.</strong></p>
+      <p><strong>Deine Aufgabe:</strong> Wähle ein beliebiges Arcade-Spiel. Die Gruppe legt <em>vor deinem ersten Einwurf</em> fest, was „Bestehen" bedeutet – du hörst es erst, wenn du dich ans Gerät stellst.</p>
+      <p class="task-note">📸 Foto oder Video beim Spielen als Beweis · Optional: Karate-Grundstellung während des Spiels</p>
+      <hr style="margin:14px 0; border:none; border-top:1px solid #eee;">
+      <p><strong>Nach dem Kampf – die Zeremonie:</strong></p>
+      <p><em>„Du bist heute durch Prag gezogen wie ein Schüler. Du hast gelernt: Respekt. Liebe. Mut. Gemeinschaft. Disziplin. Das sind die Gürtel des Lebens – und du trägst sie alle. Empfange deinen Schwarzen Gürtel."</em></p>`,
+    penalty: null
+  }
+];
+
+// ── DATA: BELTS ────────────────────────────────────────────────────────────────
+const BELTS = [
+  { name:'Weiß',    emoji:'🤍', locId:null, pts:0   },
+  { name:'Gelb',    emoji:'💛', locId:'L1', pts:15  },
+  { name:'Orange',  emoji:'🧡', locId:'L2', pts:40  },
+  { name:'Grün',    emoji:'💚', locId:'L3', pts:70  },
+  { name:'Blau',    emoji:'💙', locId:'L4', pts:105 },
+  { name:'Braun',   emoji:'🤎', locId:'L5', pts:135 },
+  { name:'Schwarz', emoji:'🖤', locId:'L6', pts:170 },
+];
+
+// ── DATA: BONUS TASKS ──────────────────────────────────────────────────────────
+
+const BONUS_TASKS = [
+  { id:'B01', title:'Anna hasst diesen Trick',    pts:5,  time:'10 Min',
+    body:`<p>Finde eine Taube. Stelle dich in 30 cm Abstand direkt gegenüber und starre sie an. Keine Bewegung, kein Lachen, kein Scheuchen – nur Blickkontakt.</p><p>Ziel: Die Taube verlässt den Bereich oder blinzelt zuerst. Zeitlimit: <strong>90 Sekunden</strong>.</p>`,
+    penalty:'Strafshot. Die Taube hat gewonnen.' },
+  { id:'B02', title:'Schwerpunkt',                pts:10, time:'15 Min',
+    body:`<p>Die Gruppe wählt einen Gegenstand und legt ihn auf deinen Kopf. Laufe damit <strong>20 Schritte geradeaus</strong> ohne ihn mit den Händen zu halten. Fällt er: neu anfangen. Du hast <strong>3 Versuche</strong>.</p>`,
+    penalty:'Strafshot. Ein Karatemeister ohne Gleichgewicht ist nichts.' },
+  { id:'B03', title:'Sprachbarriere',             pts:10, time:'15 Min',
+    body:`<p>Sprich einen Einheimischen, Kellner oder Barkeeper an und bitte um einen Tschechisch-Crashkurs. 5 Wörter lernen – der Lehrer muss mindestens 3 zum Nachsprechen geben.</p><p class="task-note">Die Wörter werden am Ende des Tages der Gruppe vorgetragen.</p>`,
+    penalty:'Strafshot. Wenigstens „Na zdraví" richtig aussprechen.' },
+  { id:'B04', title:'Die Zeitkapsel',             pts:10, time:'15 Min',
+    body:`<p>Nimm eine Sprachnachricht auf – an dich selbst. Zu öffnen am <strong>Tag der Hochzeit</strong>.</p><p>Inhalt: Ein Rat für das erste Ehejahr.</p><p class="task-note">Die Aufnahme wird nicht gelöscht und dem Bräutigam übergeben.</p>`,
+    penalty:'Strafshot. An der Hochzeit wirst du wissen, warum du das hättest tun sollen.' },
+  { id:'B05', title:'Das Wappen der Sippe',       pts:10, time:'15 Min',
+    body:`<p>Zeichne in <strong>7 Minuten</strong> das Familienwappen der zukünftigen Familie.</p><ul><li>Ein Tier (kein Adler)</li><li>Ein Symbol für die Braut, eines für den Bräutigam</li><li>Ein erfundener lateinischer Wahlspruch</li></ul><p class="task-note">Gruppe vergibt eine Note (1–5).</p>`,
+    penalty:'Note 4 oder schlechter: Strafshot. Das Wappen hängt trotzdem – als ewige Mahnung.' },
+  { id:'B06', title:'Inkognito',                  pts:15, time:'20 Min',
+    body:`<p>Du bist jetzt eine Berühmtheit. Wer genau – die Gruppe entscheidet.</p><p>Überzeuge <strong>2 Fremde</strong>, dass du ein bekannter Schauspieler, Sportler oder Influencer bist. Ziel: Selfie „für die Fans".</p><p class="task-note">Auftreten: selbstverständlich, lässig, gelangweilt vom Ruhm.</p>`,
+    penalty:'Strafshot. Niemand wollte ein Foto mit dir.' },
+  { id:'B07', title:'Entschleunigung',            pts:15, time:'15 Min',
+    body:`<p>Ab jetzt: <strong>2 Minuten Zeitlupe</strong>. Gehen, Trinken, Sprechen – alles in Zeitlupe. Ein Gruppenmitglied summt den Soundtrack. Gruppe wählt.</p><p class="task-note">Bei Lachen oder Abbruch: neu anfangen.</p>`,
+    penalty:'Strafshot. In Zeitlupe.' },
+  { id:'B08', title:'Sir David',                  pts:15, time:'15 Min',
+    body:`<p>Du bist David Attenborough. <strong>60 Sekunden lang</strong> das Geschehen um dich herum als BBC-Naturdokumentation kommentieren: tiefe Stimme, dramatische Pausen, wissenschaftlicher Ernst.</p><p class="task-note">Mindestens ein Tier oder Mensch muss als Spezies benannt werden.</p>`,
+    penalty:'Strafshot. BBC-Vertrag gekündigt.' },
+  { id:'B09', title:'Wucher!!!',                  pts:15, time:'20 Min',
+    body:`<p>Kaufe irgendetwas und verhandle den Preis. Ziel: Mindestens <strong>1 CZK Rabatt</strong>.</p><p class="task-note">Keine Drohungen, kein Mitleid. Nur Charme. Gruppe ist Zeuge.</p>`,
+    penalty:'Du kaufst zum vollen Preis. Plus Strafshot.' },
+  { id:'B10', title:'Image-Pflege',               pts:15, time:'30 Min',
+    body:`<p>Die Gruppe malt dir einen Streifen auf jede Wange. Die Bemalung bleibt <strong>mindestens 30 Minuten</strong> dran – überall. Kein Abwischen.</p>`,
+    penalty:'Strafshot. Dein Image ist am Bröckeln.' },
+  { id:'B11', title:'Street Fight',               pts:20, time:'25 Min',
+    body:`<p>Suche einen öffentlichen Platz mit mindestens 5 Personen in Sichtweite. Führe eine Karate-Kata durch – mindestens <strong>30 Sekunden</strong>, in voller Ernsthaftigkeit.</p>`,
+    penalty:'Strafshot. Und die Kata findet trotzdem statt.' },
+  { id:'B12', title:'Weisheiten des Lebens',      pts:20, time:'25 Min',
+    body:`<p>Sprich <strong>3 Fremde</strong> an und teile jedem die wichtigste Lektion deines Lebens mit – ein Satz, ohne Kontext, direkt rein. Auf Englisch okay.</p>`,
+    penalty:'Strafshot. Deine Weisheit hat versagt.' },
+  { id:'B13', title:'Kampfkunsttraining',         pts:10, time:'15 Min',
+    body:`<p>Fordere eine fremde Person zum Stein-Schere-Papier-Duell heraus – Best of 3. Kein Kontext, keine Erklärung. Einfach: <strong>„Rock, paper, scissors?"</strong></p><p class="task-note">Gruppe beobachtet. Ergebnis wird notiert.</p>`,
+    penalty:'Strafshot. Stein schlägt Schüler.' },
+  { id:'B14', title:'Dein Bester Gefährte',       pts:10, time:'20 Min',
+    body:`<p>Finde eine Katze. Bringe sie dazu, <strong>zu dir zu kommen oder auf dich zu reagieren</strong>. Kein Aufheben, kein Hinterherrennen, kein Futter. Nur Geduld.</p><p class="task-note">Die Gruppe urteilt: Hat die Katze reagiert?</p>`,
+    penalty:'Die Katze hat dich ignoriert. Strafshot.' },
+  { id:'B15', title:'Feldpost',                   pts:10, time:'10 Min',
+    body:`<p>Schicke der Braut eine Sprachnachricht – dramatisch, ernst, mit Pathos:</p><blockquote>„Ich trainiere gerade für die Ehe. Es ist schwerer als erwartet. Aber ich bin bereit."</blockquote><p class="task-note">Gruppe hört die Nachricht vor dem Absenden ab.</p>`,
+    penalty:'Strafshot. Die Gruppe schickt eine eigene Nachricht an die Braut.' },
+  { id:'B16', title:'Anklage',                    pts:15, time:'20 Min',
+    body:`<p>Die Anklage lautet:</p><blockquote>„Er hat auf der letzten Gruppenreise das letzte Bier genommen, nichts nachgekauft und einen leeren Kühlschrank mit einem Post-it 'War lecker – danke!' hinterlassen."</blockquote><p>1 Minute Verteidigung. Dann Abstimmung.</p><ul><li>Freigesprochen → Bestanden</li><li>Schuldig → Strafshot + Gruppenstrafe</li></ul>`,
+    penalty: null },
+  { id:'B17', title:'Last Man Standing',          pts:15, time:'15 Min',
+    body:`<p><strong>3 Runden Stare-Down</strong> gegen ein Gruppenmitglied – je 30 Sekunden, Augenkontakt halten. Kein Blinzeln, kein Lachen. Best of 3.</p><p class="task-note">Verlierer macht beim nächsten Strafshot mit.</p>`,
+    penalty:'Strafshot. Wer den Blick nicht halten kann, hält auch die Ehe nicht.' },
+  { id:'B18', title:'Schweigen ist Gold',         pts:15, time:'20 Min',
+    body:`<p>Betritt eine Bar oder einen Kiosk und bestelle etwas – <strong>ohne ein einziges Wort</strong>. Nur Gestik, Mimik, Zeigen. Kein Handy als Übersetzer.</p>`,
+    penalty:'Du bestellst nochmal – laut und auf Tschechisch. Strafshot.' },
+  { id:'B19', title:'Vom Schüler zum Meister',    pts:20, time:'25 Min',
+    body:`<p>Finde Touristen und biete ihnen eine <strong>2-minütige Stadtführung</strong> an. Inhalt: frei erfunden. Alle Fakten dürfen ausgedacht sein. Sprache: Englisch.</p>`,
+    penalty:'Strafshot. Kein Fremdenführer, nirgends.' }
+];
+
+// ── MODAL HELPERS ─────────────────────────────────────────────────────────────
+
+function showModal(id) { document.getElementById(id).classList.add('open'); }
+function hideModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.backdrop').forEach(el =>
+  el.addEventListener('click', e => { if (e.target === el) hideModal(el.id); })
+);
+
+// ── ACTIONS: LOCATION ─────────────────────────────────────────────────────────
+
+function askEnvOpen(id) {
+  if (hasPendingShot()) return;
+  if (activeCount() >= 2) return;
+  if (locActive()) return; // only one loc task at a time
+  const t = LOC_TASKS.find(x => x.id === id);
+  document.getElementById('em-title').textContent = `Umschlag ${t.num} öffnen?`;
+  document.getElementById('em-meta').textContent = `„${t.outerTitle}" · ${t.window}`;
+  document.getElementById('em-btn').onclick = () => {
+    S[id] = 'active'; save(); hideModal('env-modal'); render();
+  };
+  showModal('env-modal');
+}
+
+function envDone(id) {
+  S[id] = 'done'; save(); render();
+}
+
+function envFail(id) {
+  const t = LOC_TASKS.find(x => x.id === id);
+  document.getElementById('fail-box').style.display = 'none';
+  document.getElementById('fail-btn').onclick = () => {
+    S[id] = 'failed'; save(); hideModal('fail-modal'); render();
+    if (t.penalty) {
+      document.getElementById('penalty-popup-body').textContent = t.penalty;
+      document.getElementById('penalty-confirm-btn').onclick = () => { markShot(id); hideModal('penalty-modal'); };
+      showModal('penalty-modal');
+    }
+  };
+  showModal('fail-modal');
+}
+
+function markShot(id) { S[id] = 'shot'; save(); render(); }
+
+// Toggle expanded view of completed loc task
+function toggleLocDone(id) {
+  const detail = document.getElementById('loc-detail-' + id);
+  const row = document.getElementById('loc-row-' + id);
+  if (!detail) return;
+  const open = detail.classList.toggle('visible');
+  row.classList.toggle('open', open);
+}
+
+// ── ACTIONS: BONUS ────────────────────────────────────────────────────────────
+
+function askBonusOpen(id) {
+  if (hasPendingShot()) return;
+  if (activeCount() >= 2) return;
+  const t = BONUS_TASKS.find(x => x.id === id);
+  document.getElementById('om-title').textContent = t.title;
+  document.getElementById('om-meta').textContent = `${t.id} · ${t.pts} Pkt · ${t.time}`;
+  document.getElementById('om-btn').onclick = () => {
+    S[id] = 'active';
+    S[id + '_start'] = Date.now();
+    save(); hideModal('open-modal'); render();
+  };
+  showModal('open-modal');
+}
+
+function bonusDone(id) { S[id] = 'done'; save(); render(); }
+
+function bonusFail(id) {
+  const t = BONUS_TASKS.find(x => x.id === id);
+  document.getElementById('fail-box').style.display = 'none';
+  document.getElementById('fail-btn').onclick = () => {
+    S[id] = 'failed'; save(); hideModal('fail-modal'); render();
+    if (t.penalty) {
+      document.getElementById('penalty-popup-body').textContent = t.penalty;
+      document.getElementById('penalty-confirm-btn').onclick = () => hideModal('penalty-modal');
+      showModal('penalty-modal');
+    }
+  };
+  showModal('fail-modal');
+}
+
+// ── RESET ─────────────────────────────────────────────────────────────────────
+
+function doReset() {
+  [...LOC_TASKS, ...BONUS_TASKS].forEach(t => {
+    S[t.id] = 'initial';
+    delete S[t.id + '_start'];
+  });
+  delete S['_beltSeen'];
+  delete S['_toastedBelt'];
+  delete S['_introSeen'];
+  localStorage.removeItem(TUT_KEY);
+  save(); hideModal('reset-modal'); render();
+  // Intro + Tutorial werden beim nächsten Seitenaufruf erneut gezeigt
+}
+
+// ── RENDER: LOCATION TASKS ────────────────────────────────────────────────────
+
+function renderLocTask(t) {
+  const now = getNowMins();
+  const st  = S[t.id];
+  const openMins = parseMins(t.openTime);
+  const dlMins   = t.deadline ? parseMins(t.deadline) : null;
+  const maxed    = activeCount() >= 2;
+  const locBusy  = locActive();
+
+  // Failed – show Jägermeister shot button so he can redeem the belt prerequisite
+  if (st === 'failed') {
+    return `
+    <div class="loc-done">
+      <div class="loc-done-row" style="cursor:default">
+        <div class="sdot failed">✗</div>
+        <div class="di">
+          <div class="dtitle">Umschlag ${t.num} – ${t.outerTitle}</div>
+          <div class="dmeta">${t.destination} · Nicht bestanden · Strafshot!</div>
+        </div>
+        <button class="btn-shot" onclick="markShot('${t.id}')">🥃 Shot ✓</button>
+      </div>
+    </div>`;
+  }
+
+  // Completed (done or shot)
+  if (st === 'done' || st === 'shot') {
+    const icon  = st === 'done' ? '✓' : '🥃';
+    const label = st === 'done' ? 'Erledigt' : 'Shot getrunken';
+    return `
+    <div class="loc-done">
+      <div class="loc-done-row" id="loc-row-${t.id}" onclick="toggleLocDone('${t.id}')">
+        <div class="sdot ${st}">${icon}</div>
+        <div class="di">
+          <div class="dtitle">Umschlag ${t.num} – ${t.outerTitle}</div>
+          <div class="dmeta">${t.destination} · ${label}</div>
+        </div>
+        <div class="dchevron">▼</div>
+      </div>
+      <div class="loc-done-detail" id="loc-detail-${t.id}">
+        <div class="dest-box">
+          <div class="dest-label">Zielort</div>
+          <div class="dest-name">${t.destination}</div>
+          <div class="dest-addr">${t.address}</div>
+        </div>
+        ${t.body}
+      </div>
+    </div>`;
+  }
+
+  // Active
+  if (st === 'active') {
+    const dlLeft = dlMins ? dlMins - now : null;
+    const dlStr  = dlLeft !== null
+      ? (dlLeft <= 0 ? '⚠️ Zeit abgelaufen!' : `Deadline: ${t.deadline} · noch ${fmtCountdown(dlLeft)}`)
+      : 'Kein Zeitlimit';
+    const urgent = dlLeft !== null && dlLeft <= 10;
+    return `
+    <div class="loc-active">
+      <div class="loc-active-hd">
+        <div class="row1">
+          <span class="anum">Umschlag ${t.num}</span>
+          <span class="adl${urgent ? ' urgent' : ''}">${dlStr}</span>
+        </div>
+        <div class="atitle">${t.outerTitle}</div>
+      </div>
+      <div class="loc-active-body">
+        <div class="dest-box">
+          <div class="dest-label">Zielort</div>
+          <div class="dest-name">${t.destination}</div>
+          <div class="dest-addr">${t.address}</div>
+        </div>
+        ${t.body}
+      </div>
+      <div class="act-btns">
+        <button class="btn-done" onclick="envDone('${t.id}')">✓ Erledigt</button>
+        <button class="btn-fail" onclick="envFail('${t.id}')">✗ Aufgegeben</button>
+      </div>
+    </div>`;
+  }
+
+  // Initial: unlockable or locked
+  const canUnlock = now >= openMins;
+
+  if (canUnlock) {
+    const blocked = maxed || locBusy || hasPendingShot();
+    return `
+    <div class="loc-unlockable" style="${blocked ? 'opacity:.4;pointer-events:none' : ''}">
+      <div class="env-content">
+        <div class="env-num gold">Umschlag ${t.num}</div>
+        <div class="env-heading">${t.outerTitle}</div>
+        <div class="env-sub gold">${t.evening ? '📍 Bei Ankunft öffnen' : '📬 Jetzt öffnen!'}</div>
+        ${t.deadline ? `<div class="env-badges"><span class="deadline-badge">⏰ bis ${t.deadline} Uhr</span></div>` : ''}
+      </div>
+      <button class="btn-env-open" onclick="askEnvOpen('${t.id}')">Öffnen</button>
+    </div>`;
+  }
+
+  // Locked: show countdown with wax seal
+  const waitMins = openMins - now;
+  return `
+  <div class="loc-locked">
+    <div class="env-content">
+      <div class="env-num">Umschlag ${t.num}</div>
+      <div class="env-heading">${t.outerTitle}</div>
+      <div class="env-sub">🕐 Öffnet ${t.openTime} · noch ${fmtCountdown(waitMins)}</div>
+      ${t.deadline ? `<div class="env-badges"><span class="deadline-badge">⏰ bis ${t.deadline} Uhr</span></div>` : ''}
+    </div>
+    <div class="env-seal">${t.num}</div>
+  </div>`;
+}
+
+// ── RENDER: PROGRAMM TAB ──────────────────────────────────────────────────────
+
+function renderProg() {
+  const day     = LOC_TASKS.filter(t => !t.evening);
+  const evening = LOC_TASKS.filter(t =>  t.evening);
+  let h = '';
+
+  h += `<div class="sec-label">Tagesprogramm · 11:00 – 17:00</div>`;
+  day.forEach(t => { h += renderLocTask(t); });
+
+  h += `<div class="sec-label">Abendprogramm</div>`;
+  evening.forEach(t => { h += renderLocTask(t); });
+
+  document.getElementById('prog-root').innerHTML = h;
+}
+
+// ── RENDER: BONUS TAB ─────────────────────────────────────────────────────────
+
+function renderBonus() {
+  const active    = BONUS_TASKS.filter(t => S[t.id] === 'active');
+  const locked    = BONUS_TASKS.filter(t => S[t.id] === 'initial');
+  const done      = BONUS_TASKS.filter(t => S[t.id] === 'done');
+  const failed    = BONUS_TASKS.filter(t => S[t.id] === 'failed');
+  const completed = [...done, ...failed].sort((a,b) => a.id.localeCompare(b.id));
+  const maxed     = activeCount() >= 2;
+
+  let h = '';
+
+  h += `<div class="sec-label">Aktive Bonus-Aufgaben</div>`;
+  if (active.length === 0) {
+    h += `<div class="no-active">Noch keine Bonus-Aufgabe geöffnet.<br>Wähle eine aus der Liste unten.</div>`;
+  } else {
+    active.forEach(t => {
+      const rem     = bonusRemainingMs(t);
+      const expired = rem !== null && rem <= 0;
+      const urgent  = rem !== null && rem > 0 && rem < 120000;
+      const timerCls = expired ? ' expired' : urgent ? ' urgent' : '';
+      const timerTxt = expired ? '⛔ Zeit abgelaufen!' : rem !== null ? `⏱ noch ${fmtTimer(rem)}` : '';
+      h += `
+      <div class="bon-active">
+        <div class="bon-active-hd">
+          <div class="row1"><span class="bid">${t.id}</span><span class="bmeta"><span class="pts-badge-dk">⭐ ${t.pts} Pkt</span> <span class="time-badge-dk">⏱ ${t.time}</span></span></div>
+          <div class="btitle">${t.title}</div>
+          ${timerTxt ? `<div class="bon-timer${timerCls}" id="bon-timer-${t.id}">${timerTxt}</div>` : ''}
+        </div>
+        <div class="bon-active-body">
+          ${t.body}
+        </div>
+        <div class="act-btns" style="${expired ? 'grid-template-columns:1fr' : ''}">
+          ${expired ? '' : `<button class="btn-done" onclick="bonusDone('${t.id}')">✓ Erledigt</button>`}
+          <button class="btn-fail" onclick="bonusFail('${t.id}')">✗ Gescheitert</button>
+        </div>
+      </div>`;
+    });
+  }
+
+  if (locked.length > 0) {
+    h += `<div class="sec-label">Verfügbar (${locked.length})</div>`;
+    if (hasPendingShot()) h += `<div class="max-banner" style="background:#fef0f0;border-color:var(--red);color:#c0392b;">🥃 Erst den Strafshot trinken – dann geht's weiter!</div>`;
+    else if (maxed) h += `<div class="max-banner">Erst eine aktive Aufgabe abschließen.</div>`;
+    locked.forEach(t => {
+      h += `
+      <div class="locked-row${maxed ? ' dimmed' : ''}">
+        <div class="linfo">
+          <div class="ltitle">${t.title}</div>
+          <div class="lmeta"><span class="pts-badge">⭐ ${t.pts} Pkt</span><span class="time-badge">⏱ ${t.time}</span></div>
+        </div>
+        <button class="btn-open" onclick="askBonusOpen('${t.id}')">Öffnen</button>
+      </div>`;
+    });
+  }
+
+  if (completed.length > 0) {
+    h += `<div class="sec-label">Abgeschlossen (${completed.length})</div>`;
+    completed.forEach(t => {
+      const st = S[t.id];
+      h += `
+      <div class="done-row ${st}">
+        <div class="sdot ${st}">${st === 'done' ? '✓' : '✗'}</div>
+        <div class="dinfo">
+          <div class="dtitle">${t.title}</div>
+          <div class="dmeta">${t.id} · <span class="pts-badge" style="font-size:.65rem;padding:1px 7px">⭐ ${t.pts} Pkt</span></div>
+          ${st === 'failed' && t.penalty ? `<div class="fail-penalty">🥃 ${t.penalty}</div>` : ''}
+        </div>
+        <div class="dstatus">${st === 'done' ? 'Erledigt' : 'Gescheitert'}</div>
+      </div>`;
+    });
+  }
+
+  document.getElementById('bonus-root').innerHTML = h;
+}
+
+// ── RENDER: HEADER ────────────────────────────────────────────────────────────
+
+function renderHeader() {
+  const now   = getNowMins();
+  const total = activeCount();
+
+  // clock
+  const clockEl = document.getElementById('clock');
+  clockEl.textContent = getNowStr();
+  clockEl.className = 'hdr-clock' + (URL_ZEIT ? ' debug' : '');
+
+  // slots
+  document.getElementById('slot1').classList.toggle('on', total >= 1);
+  document.getElementById('slot2').classList.toggle('on', total >= 2);
+  document.getElementById('slot-label').textContent = `${total} / 2 aktiv`;
+
+  // next-hint: find next upcoming loc task
+  const next = LOC_TASKS.find(t => S[t.id] === 'initial' && parseMins(t.openTime) > now);
+  const hint = document.getElementById('next-hint');
+  if (next) {
+    const diff = parseMins(next.openTime) - now;
+    if (diff === 0) hint.textContent = `📩 Umschlag ${next.num} ist jetzt offen!`;
+    else hint.textContent = `🔒 Umschlag ${next.num} öffnet in ${fmtCountdown(diff)}`;
+  } else {
+    const anyUnlockable = LOC_TASKS.find(t => S[t.id] === 'initial' && parseMins(t.openTime) <= now);
+    hint.textContent = anyUnlockable ? `📩 Umschlag ${anyUnlockable.num} wartet auf dich!` : '';
+  }
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+
+function render() {
+  renderHeader();
+  renderProg();
+  renderBonus();
+  checkBeltUnlock();
+  updateFabBadge();
+}
+
+// ── BELT PAGE ─────────────────────────────────────────────────────────────────
+
+function openBeltPage() {
+  const prevSeen = S['_beltSeen'] ?? 0;
+  renderBeltPage(prevSeen);
+  document.getElementById('belt-overlay').classList.add('open');
+  S['_beltSeen'] = currentBeltIdx();
+  save();
+  updateFabBadge();
+}
+
+function closeBeltPage() {
+  document.getElementById('belt-overlay').classList.remove('open');
+}
+
+function renderBeltPage(seenIdx) {
+  const bp   = bonusPoints();
+  const idx  = currentBeltIdx();
+  const seen = seenIdx !== undefined ? seenIdx : (S['_beltSeen'] ?? 0);
+  const pct  = Math.min(100, Math.round(bp / 255 * 100));
+
+  document.getElementById('belt-bar-fill').style.width = pct + '%';
+  document.getElementById('belt-bar-pts').innerHTML    = `<strong>${bp}</strong> / 255 Pkt`;
+  document.getElementById('belt-bar-pct').textContent  = pct + ' %';
+
+  let h = '';
+  BELTS.forEach((b, i) => {
+    const unlocked   = i <= idx;
+    const isCurrent  = i === idx;
+    const isNew      = unlocked && i > seen;
+
+    let cls = 'belt-item';
+    if (!unlocked)  cls += ' locked';
+    if (isCurrent)  cls += ' is-current';
+    if (isNew)      cls += ' new-unlock';
+
+    let reqText, reqDone = unlocked;
+    if (i === 0) {
+      reqText = 'Startgürtel';
+    } else {
+      const locOk = b.locId ? locPassed(b.locId) : true;
+      const ptsOk = bp >= b.pts;
+      const parts = [];
+      if (b.locId) parts.push(`Umschlag ${b.locId.replace('L','')}${locOk ? ' ✓' : ''}`);
+      parts.push(`${b.pts} Bonus-Pkt${(unlocked || ptsOk) ? ' ✓' : ` (${bp}/${b.pts})`}`);
+      reqText = parts.join(' · ');
+    }
+
+    const tags = [];
+    if (isCurrent) tags.push(`<span class="belt-tag cur">Aktuell</span>`);
+    if (isNew)     tags.push(`<span class="belt-tag neu">Neu ✨</span>`);
+    const icon = !unlocked ? '🔒' : isCurrent ? '' : '✅';
+
+    h += `
+    <div class="${cls}">
+      <div class="belt-emoji">${b.emoji}</div>
+      <div class="belt-item-info">
+        <div class="belt-item-name">${b.name}er Gürtel ${tags.join('')}</div>
+        <div class="belt-item-req ${reqDone ? 'done' : ''}">${reqText}</div>
+      </div>
+      <div class="belt-status-icon">${icon}</div>
+    </div>`;
+  });
+
+  document.getElementById('belt-list').innerHTML = h;
+}
+
+// ── BONUS TIMER RUNTIME ───────────────────────────────────────────────────────
+
+function showExpiredToast(t) {
+  const el = document.createElement('div');
+  el.className = 'toast toast-expired';
+  el.innerHTML = `<div class="toast-icon">⛔</div>
+    <div class="toast-body">
+      <div class="toast-lbl">Zeit abgelaufen!</div>
+      <div class="toast-name">${t.title}</div>
+    </div>`;
+  document.getElementById('toast-wrap').appendChild(el);
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 300); }, 4500);
+  if (t.penalty) setTimeout(() => {
+    document.getElementById('penalty-popup-body').textContent = t.penalty;
+    document.getElementById('penalty-confirm-btn').onclick = () => hideModal('penalty-modal');
+    showModal('penalty-modal');
+  }, 600);
+}
+
+function checkBonusTimers() {
+  let changed = false;
+  BONUS_TASKS.forEach(t => {
+    if (S[t.id] !== 'active') return;
+    const rem = bonusRemainingMs(t);
+    if (rem !== null && rem <= 0) {
+      S[t.id] = 'failed'; save();
+      showExpiredToast(t);
+      changed = true;
+    }
+  });
+  if (changed) render();
+}
+
+function updateBonusTimers() {
+  BONUS_TASKS.forEach(t => {
+    const el = document.getElementById('bon-timer-' + t.id);
+    if (!el) return;
+    const rem     = bonusRemainingMs(t);
+    if (rem === null) return;
+    const expired = rem <= 0;
+    const urgent  = rem > 0 && rem < 120000;
+    el.className  = 'bon-timer' + (expired ? ' expired' : urgent ? ' urgent' : '');
+    el.textContent = expired ? '⛔ Zeit abgelaufen!' : `⏱ noch ${fmtTimer(rem)}`;
+  });
+}
+
+// ── ACHIEVEMENTS ──────────────────────────────────────────────────────────────
+
+function updateFabBadge() {
+  const unseen = currentBeltIdx() - (S['_beltSeen'] ?? 0);
+  const badge  = document.getElementById('fab-badge');
+  badge.textContent = unseen;
+  badge.classList.toggle('on', unseen > 0);
+}
+
+function showBeltToast(belt, delayIdx) {
+  setTimeout(() => {
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.innerHTML = `
+      <div class="toast-icon">${belt.emoji}</div>
+      <div class="toast-body">
+        <div class="toast-lbl">🎉 Gürtel freigeschaltet!</div>
+        <div class="toast-name">${belt.name}er Gürtel</div>
+      </div>`;
+    document.getElementById('toast-wrap').appendChild(el);
+    setTimeout(() => {
+      el.classList.add('out');
+      setTimeout(() => el.remove(), 300);
+    }, 3800);
+  }, delayIdx * 800);
+}
+
+function checkBeltUnlock() {
+  const idx = currentBeltIdx();
+  if (!('_toastedBelt' in S)) {
+    S['_toastedBelt'] = idx; save(); return;
+  }
+  const last = S['_toastedBelt'];
+  if (idx > last) {
+    for (let i = last + 1; i <= idx; i++) showBeltToast(BELTS[i], i - last - 1);
+    S['_toastedBelt'] = idx; save();
+  }
+}
+
+// ── TUTORIAL ──────────────────────────────────────────────────────────────────
+// Stored in a persistent (non-date-scoped) key so it only shows once ever
+const TUT_KEY = 'jga-tutorial-v1';
+
+const TUTORIAL_STEPS = [
+  {
+    el: null,
+    title: 'Dein JGA-Programm',
+    text: 'Kurze Einführung in die wichtigsten Elemente – dauert nur 30 Sekunden.',
+  },
+  {
+    el: () => document.querySelector('#prog-root .loc-locked, #prog-root .loc-unlockable'),
+    title: '📩 Deine Umschläge',
+    text: 'Jede Station steckt in einem Umschlag. Er öffnet sich zur angegebenen Uhrzeit. Die rote Markierung zeigt deine Deadline – danach zählt die Aufgabe als gescheitert.',
+  },
+  {
+    el: () => document.querySelector('.slots'),
+    title: '⚡ Aufgaben-Slots',
+    text: 'Du kannst max. 2 Aufgaben gleichzeitig aktiv haben – aber immer nur eine Ortsaufgabe. Erlaubt: eine Orts- + eine Bonusaufgabe, oder zwei Bonusaufgaben.',
+  },
+  {
+    el: () => document.getElementById('tab-btn-bonus'),
+    title: '🎯 Bonus-Aufgaben',
+    text: 'Im Bonus-Tab findest du freie Zusatzaufgaben in beliebiger Reihenfolge. Jede bringt Punkte – je schwieriger, desto mehr.',
+  },
+  {
+    el: () => document.getElementById('fab-belt'),
+    title: '🥋 Gürtelfortschritt – wichtig!',
+    text: 'Hier siehst du deinen aktuellen Gürtel und was du für den nächsten brauchst. Jede abgeschlossene Ortsaufgabe öffnet eine neue Gürtelstufe – Bonus-Punkte entscheiden, ob du ihn bekommst. Tippe jetzt drauf!',
+    isLast: true,
+  },
+];
+
+let _tutStep = 0;
+
+function showTutorial() {
+  if (localStorage.getItem(TUT_KEY)) return;
+  _tutStep = 0;
+  document.getElementById('tutorial-overlay').classList.remove('hidden');
+  document.getElementById('tutorial-tooltip').classList.remove('hidden');
+  applyTutorialStep();
+}
+
+function applyTutorialStep() {
+  const step   = TUTORIAL_STEPS[_tutStep];
+  const isLast = _tutStep === TUTORIAL_STEPS.length - 1;
+
+  document.getElementById('tutorial-title').textContent    = step.title;
+  document.getElementById('tutorial-text').textContent     = step.text;
+  document.getElementById('tutorial-step-ind').textContent = `${_tutStep + 1} / ${TUTORIAL_STEPS.length}`;
+  const nextBtn = document.getElementById('tutorial-next');
+  nextBtn.textContent = isLast ? '🥋 Los geht\'s!' : 'Weiter →';
+  nextBtn.className   = 'tutorial-next' + (isLast ? ' last' : '');
+
+  document.getElementById('tutorial-ring').classList.add('hidden');
+
+  const targetEl = step.el ? step.el() : null;
+  if (targetEl) {
+    targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => {
+      const rect = targetEl.getBoundingClientRect();
+      positionRing(rect);
+      positionTooltipNearRect(rect);
+    }, 350);
+  } else {
+    centerTutorialTooltip();
+  }
+}
+
+function positionRing(rect) {
+  const pad  = 7;
+  const ring = document.getElementById('tutorial-ring');
+  ring.style.top    = (rect.top    - pad) + 'px';
+  ring.style.left   = (rect.left   - pad) + 'px';
+  ring.style.width  = (rect.width  + pad * 2) + 'px';
+  ring.style.height = (rect.height + pad * 2) + 'px';
+  ring.classList.add('hidden');
+  requestAnimationFrame(() => ring.classList.remove('hidden'));
+}
+
+function positionTooltipNearRect(rect) {
+  const tooltip = document.getElementById('tutorial-tooltip');
+  const vh = window.innerHeight;
+  const gap = 14;
+  tooltip.style.left  = '16px';
+  tooltip.style.right = '16px';
+  tooltip.style.transform = '';
+  if (rect.top > vh / 2) {
+    tooltip.style.top    = 'auto';
+    tooltip.style.bottom = (vh - rect.top + gap) + 'px';
+  } else {
+    tooltip.style.bottom = 'auto';
+    tooltip.style.top    = (rect.bottom + gap) + 'px';
+  }
+}
+
+function centerTutorialTooltip() {
+  const tooltip = document.getElementById('tutorial-tooltip');
+  tooltip.style.top    = '50%';
+  tooltip.style.bottom = 'auto';
+  tooltip.style.left   = '16px';
+  tooltip.style.right  = '16px';
+  tooltip.style.transform = 'translateY(-50%)';
+}
+
+function tutorialNext() {
+  _tutStep++;
+  if (_tutStep >= TUTORIAL_STEPS.length) { closeTutorial(); return; }
+  applyTutorialStep();
+}
+
+function closeTutorial() {
+  document.getElementById('tutorial-overlay').classList.add('hidden');
+  document.getElementById('tutorial-ring').classList.add('hidden');
+  document.getElementById('tutorial-tooltip').classList.add('hidden');
+  localStorage.setItem(TUT_KEY, '1');
+}
+
+// ── INTRO ─────────────────────────────────────────────────────────────────────
+
+const INTRO_SLIDES = [
+  ['Hey.', 'Hör zu.'],
+  ['Du bist auf einem JGA.', 'Aber nicht irgendeinem.'],
+  ['Heute wirst du Karatemeister.', 'Ob du willst oder nicht.'],
+  ['Prag ist dein Dojo.', 'Die Straßen: dein Trainingsgelände.', 'Die Tauben: deine Gegner.'],
+  ['Dafür hast du Umschläge.', 'Jeder Umschlag: eine Aufgabe.', 'Jede Aufgabe: ein Test.'],
+  ['Bonus-Aufgaben bringen Punkte.', 'Punkte bringen Gürtel.', 'Gürtel bringen Ruhm.'],
+  ['Scheiterst du?', 'Strafshot Jägermeister.', 'Die Gruppe urteilt. Immer.'],
+  ['Du hast alles, was du brauchst.', 'Außer vielleicht Würde.', 'Aber die ist überschätzt.'],
+  ['Viel Erfolg, Schüler.', 'Wir glauben an dich.', 'Meistens.'],
+  ['🥋', 'Möge der Kampf beginnen.'],
+];
+
+let _iSlide   = 0;
+let _iTyping  = false;
+let _iTimer   = null;
+let _iStarted = false;
+
+function showIntro() {
+  if (S['_introSeen']) return;
+  document.getElementById('intro-overlay').classList.remove('hidden');
+}
+
+function runSlide(idx) {
+  _iSlide  = idx;
+  _iTyping = true;
+  const lines   = INTRO_SLIDES[idx];
+  const isLast  = idx === INTRO_SLIDES.length - 1;
+  const textEl  = document.getElementById('intro-text');
+  const hintEl  = document.getElementById('intro-hint');
+  const startEl = document.getElementById('intro-start');
+  textEl.innerHTML = '';
+  hintEl.style.display  = 'none';
+  startEl.style.display = 'none';
+
+  typeLines(lines, textEl, () => {
+    _iTyping = false;
+    if (isLast) {
+      startEl.style.display = 'block';
+    } else {
+      hintEl.textContent    = 'Tippen um fortzufahren';
+      hintEl.style.display  = 'block';
+    }
+  });
+}
+
+function typeLines(lines, container, onDone, li = 0, ci = 0) {
+  if (li >= lines.length) { removeCursor(); onDone(); return; }
+
+  let el = container.children[li];
+  if (!el) {
+    el = document.createElement('span');
+    el.className = 'intro-line';
+    container.appendChild(el);
+  }
+
+  removeCursor();
+  const cursor = document.createElement('span');
+  cursor.className = 'intro-cursor';
+  el.appendChild(cursor);
+
+  const line = lines[li];
+  if (ci < line.length) {
+    el.insertBefore(document.createTextNode(line[ci]), cursor);
+    _iTimer = setTimeout(() => typeLines(lines, container, onDone, li, ci + 1),
+      line[ci] === '.' || line[ci] === '!' || line[ci] === '?' ? 180 : 38);
+  } else {
+    removeCursor();
+    _iTimer = setTimeout(() => typeLines(lines, container, onDone, li + 1, 0), 260);
+  }
+}
+
+function removeCursor() {
+  document.querySelectorAll('.intro-cursor').forEach(c => c.remove());
+}
+
+function flashSlide() {
+  // Skip typing – show full slide text instantly
+  clearTimeout(_iTimer);
+  removeCursor();
+  const lines  = INTRO_SLIDES[_iSlide];
+  const isLast = _iSlide === INTRO_SLIDES.length - 1;
+  const textEl = document.getElementById('intro-text');
+  textEl.innerHTML = '';
+  lines.forEach(line => {
+    const el = document.createElement('span');
+    el.className = 'intro-line';
+    el.textContent = line;
+    textEl.appendChild(el);
+  });
+  _iTyping = false;
+  if (isLast) {
+    document.getElementById('intro-start').style.display = 'block';
+  } else {
+    document.getElementById('intro-hint').style.display = 'block';
+  }
+}
+
+function introTap() {
+  if (!_iStarted) {
+    _iStarted = true;
+    document.getElementById('intro-hint').style.display = 'none';
+    runSlide(0);
+    return;
+  }
+  if (_iTyping) {
+    flashSlide();
+  } else if (_iSlide < INTRO_SLIDES.length - 1) {
+    document.getElementById('intro-hint').style.display = 'none';
+    runSlide(_iSlide + 1);
+  }
+}
+
+function skipIntro() {
+  clearTimeout(_iTimer);
+  removeCursor();
+  closeIntro();
+}
+
+function closeIntro() {
+  S['_introSeen'] = true; save();
+  const el = document.getElementById('intro-overlay');
+  el.style.transition = 'opacity .55s';
+  el.style.opacity = '0';
+  setTimeout(() => { el.classList.add('hidden'); showTutorial(); }, 580);
+}
+
+// ── TAB SWITCHING ─────────────────────────────────────────────────────────────
+
+function switchTab(tab) {
+  document.getElementById('pane-prog').classList.toggle('visible',  tab === 'prog');
+  document.getElementById('pane-bonus').classList.toggle('visible', tab === 'bonus');
+  document.getElementById('tab-btn-prog').classList.toggle('active',  tab === 'prog');
+  document.getElementById('tab-btn-bonus').classList.toggle('active', tab === 'bonus');
+}
+
+// ── DEBUG BAR ─────────────────────────────────────────────────────────────────
+
+if (URL_ZEIT) {
+  document.getElementById('debug-bar').style.display = 'block';
+  document.getElementById('debug-time-label').textContent = URL_ZEIT;
+}
+
+// ── TIMER: re-render every 30 sec to update countdowns ───────────────────────
+
+setInterval(render, 30000);
+setInterval(() => { checkBonusTimers(); updateBonusTimers(); }, 1000);
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+
+loadState();
+checkBonusTimers(); // auto-fail any tasks that expired while app was closed
+render();
+showIntro();
+</script>
+</body>
+</html>
