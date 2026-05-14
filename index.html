@@ -256,6 +256,15 @@
     .dest-box .dest-label { font-size: .68rem; text-transform: uppercase; letter-spacing: 1.5px; color: #7a5c1e; font-weight: 700; margin-bottom: 3px; }
     .dest-box .dest-name  { font-weight: 700; font-size: .95rem; }
     .dest-box .dest-addr  { font-size: .78rem; color: #666; margin-top: 2px; }
+    .maps-link {
+      display: inline-flex; align-items: center; gap: 4px;
+      margin-top: 8px; padding: 5px 11px;
+      background: #fff; border: 1px solid rgba(156,123,48,.35);
+      border-radius: 7px; color: var(--gold);
+      font-size: .72rem; font-weight: 600; text-decoration: none;
+      transition: background .15s;
+    }
+    .maps-link:active { background: #f5ead0; }
 
     .loc-active-body p { margin-bottom: 10px; line-height: 1.65; font-size: .91rem; }
     .loc-active-body ul,
@@ -1226,6 +1235,7 @@ const LOC_TASKS = [
     evening: false,
     destination: 'Náplavka Bauernmarkt',
     address: 'Rašínovo nábřeží, Praha 2',
+    mapsQuery: 'Náplavka Farmer Market Praha',
     body: `<p>Du stehst am Moldauufer. Vor dir: Stände, Händler, Prag erwacht.</p>
       <p><strong>Deine Aufgabe:</strong> Kaufe irgendetwas an einem Stand. Beim Bezahlen verbeugst du dich tief – Karate-Verbeugung, voller Ernst – und sagst dabei laut:</p>
       <blockquote>„Für die Energie des Kampfes."</blockquote>
@@ -1239,6 +1249,7 @@ const LOC_TASKS = [
     evening: false,
     destination: 'John Lennon Wall',
     address: 'Velkopřevorské náměstí, Malá Strana',
+    mapsQuery: 'John Lennon Wall Praha',
     body: `<p>Eine Wand voller Liebe, Farbe und Botschaften. Jetzt kommt deine dazu.</p>
       <p><strong>Deine Aufgabe:</strong> Schreibe ein Liebesgedicht an die Wand – mindestens 4 Zeilen, mit dem Namen der Braut. Stil frei, Herz Pflicht.</p>
       <p class="task-note">📸 Foto vom fertigen Gedicht an der Wand als Beweis.</p>`,
@@ -1251,6 +1262,7 @@ const LOC_TASKS = [
     evening: false,
     destination: 'Wallenstein Palastgarten',
     address: 'Letenská 4, Malá Strana · Eintritt frei',
+    mapsQuery: 'Valdštejnská zahrada Praha',
     body: `<p>In diesen Gärten lauert ein Feind. Geckenhaft. Farbenprächtig. Unberechenbar.</p>
       <p>Der <strong>Pfau</strong>.</p>
       <p><strong>Deine Aufgabe:</strong> Finde einen Pfau und stelle dich ihm zum Duell. Nimm deine kampfbereiteste Karate-Pose ein und halte sie – würdevoll und ruhig – für das Foto.</p>
@@ -1269,6 +1281,7 @@ const LOC_TASKS = [
     evening: false,
     destination: 'Letná Biergarten',
     address: 'Letenské sady 341, Praha 7 · ab 11:00 Uhr',
+    mapsQuery: 'Zahrádky Letná Beer Garden Praha',
     body: `<p>Hoch über der Stadt, Panoramablick auf Prag. Du hast dir die Beine hochgelaufen. Jetzt der Kampf.</p>
       <p><strong>Deine Aufgabe:</strong> Finde einen fremden Tisch mit mindestens 2 Personen, setze dich kurz dazu und stoße mit ihnen auf deine Hochzeit an.</p>
       <ol>
@@ -1288,6 +1301,7 @@ const LOC_TASKS = [
     evening: true,
     destination: 'My People Bar',
     address: 'Michalská 970/20, Staré Město',
+    mapsQuery: 'My People Bar Michalská Praha',
     body: `<p>Der Tag neigt sich. Aber der Meister ruht nicht.</p>
       <p><strong>Deine Aufgabe:</strong> Betritt die My People Bar und wähle einen Drink aus der Karte der <strong>Extreme Cocktails</strong>.</p>
       <p>Der Tank Shot steht auch zur Verfügung – falls du dich traust. Die Wahl liegt bei dir. Aber weiche nicht aus.</p>`,
@@ -1300,7 +1314,8 @@ const LOC_TASKS = [
     evening: true, reqDone: 'L5',
     destination: 'Joystick Arcade Bar',
     address: 'Jindřišská 5, Nové Město',
-    body: `<p>Du hast dich verbeuge vor Standbesitzern. Du hast Liebesgedichte an Wände geschrieben. Du hast einem Pfau ins Auge gesehen. Du hast mit Fremden auf deine Hochzeit angestoßen.</p>
+    mapsQuery: 'Joystick Bar Jindřišská Praha',
+    body: `<p>Du hast dich vor Standbesitzern verbeugt. Du hast Liebesgedichte an Wände geschrieben. Du hast einem Pfau ins Auge gesehen. Du hast mit Fremden auf deine Hochzeit angestoßen.</p>
       <p><strong>Jetzt steht der finale Kampf bevor. Doch dieser Kampf ist kein Kampf gegen andere – es ist ein Kampf gegen dich selbst.</strong></p>
       <p><strong>Deine Aufgabe:</strong> Wähle ein beliebiges Arcade-Spiel. Die Gruppe legt <em>vor deinem ersten Einwurf</em> fest, was „Bestehen" bedeutet – du hörst es erst, wenn du dich ans Gerät stellst.</p>
       <p class="task-note">📸 Foto oder Video beim Spielen als Beweis · Optional: Karate-Grundstellung während des Spiels</p>
@@ -1545,6 +1560,7 @@ function renderLocTask(t) {
           <div class="dest-label">Zielort</div>
           <div class="dest-name">${t.destination}</div>
           <div class="dest-addr">${t.address}</div>
+          <a class="maps-link" href="https://maps.google.com/?q=${encodeURIComponent(t.mapsQuery)}" target="_blank" rel="noopener">📍 In Google Maps öffnen</a>
         </div>
         ${t.body}
       </div>
@@ -1572,6 +1588,7 @@ function renderLocTask(t) {
           <div class="dest-label">Zielort</div>
           <div class="dest-name">${t.destination}</div>
           <div class="dest-addr">${t.address}</div>
+          <a class="maps-link" href="https://maps.google.com/?q=${encodeURIComponent(t.mapsQuery)}" target="_blank" rel="noopener">📍 In Google Maps öffnen</a>
         </div>
         ${t.body}
       </div>
