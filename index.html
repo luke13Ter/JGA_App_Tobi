@@ -1140,8 +1140,8 @@ let S = {};
 
 function loadState() {
   try { S = JSON.parse(localStorage.getItem(S_KEY) || '{}'); } catch(e) { S = {}; }
-  [...LOC_TASKS, ...BONUS_TASKS].forEach(t => { if (!S[t.id]) S[t.id] = 'initial'; });
-  EMERGENCY_TASKS.forEach(t => { if (!S[t.id]) S[t.id] = 'initial'; });
+  [...LOC_TASKS, ...BONUS_TASKS].forEach(t => { if (S[t.id] === undefined) S[t.id] = 'initial'; });
+  EMERGENCY_TASKS.forEach(t => { if (S[t.id] === undefined) S[t.id] = 'initial'; });
 }
 function save() { localStorage.setItem(S_KEY, JSON.stringify(S)); }
 
@@ -1196,7 +1196,9 @@ function getEmergencyTask() {
 }
 
 function completeEmergency(id) {
-  const needed = Math.max(1, BELTS[currentBeltIdx() + 1].pts - bonusPoints());
+  const nextBelt = BELTS[currentBeltIdx() + 1];
+  if (!nextBelt) return;
+  const needed = Math.max(1, nextBelt.pts - bonusPoints());
   S[id] = 'done';
   S[id + '_pts'] = needed;
   save();
@@ -1487,6 +1489,10 @@ function doReset() {
     S[t.id] = 'initial';
     delete S[t.id + '_start'];
   });
+  EMERGENCY_TASKS.forEach(t => {
+    S[t.id] = 'initial';
+    delete S[t.id + '_pts'];
+  });
   delete S['_beltSeen'];
   delete S['_toastedBelt'];
   delete S['_introSeen'];
@@ -1513,9 +1519,9 @@ function renderLocTask(t) {
         <div class="sdot failed">✗</div>
         <div class="di">
           <div class="dtitle">Umschlag ${t.num} – ${t.outerTitle}</div>
-          <div class="dmeta">${t.destination} · Nicht bestanden · Strafshot!</div>
+          <div class="dmeta">${t.destination} · Nicht bestanden${t.penalty ? ' · Strafshot!' : ''}</div>
         </div>
-        <button class="btn-shot" onclick="markShot('${t.id}')">🥃 Shot ✓</button>
+        ${t.penalty ? `<button class="btn-shot" onclick="markShot('${t.id}')">🥃 Shot ✓</button>` : ''}
       </div>
     </div>`;
   }
@@ -1690,9 +1696,10 @@ function renderBonus() {
     h += `<div class="sec-label">Verfügbar (${available.length})</div>`;
     if (hasPendingShot()) h += `<div class="max-banner" style="background:#fef0f0;border-color:var(--red);color:#c0392b;">🥃 Erst den Strafshot trinken – dann geht's weiter!</div>`;
     else if (maxed) h += `<div class="max-banner">Erst eine aktive Aufgabe abschließen.</div>`;
+    const blocked = maxed || hasPendingShot();
     available.forEach(t => {
       h += `
-      <div class="locked-row${maxed ? ' dimmed' : ''}">
+      <div class="locked-row${blocked ? ' dimmed' : ''}">
         <div class="linfo">
           <div class="ltitle">${t.title}</div>
           <div class="lmeta"><span class="pts-badge">⭐ ${t.pts} Pkt</span><span class="time-badge">⏱ ${t.time}</span></div>
@@ -1754,14 +1761,15 @@ function renderHeader() {
   document.getElementById('slot-label').textContent = `${total} / 2 aktiv`;
 
   // next-hint: find next upcoming loc task
-  const next = LOC_TASKS.find(t => S[t.id] === 'initial' && parseMins(t.openTime) > now);
+  const reqOk = t => !t.reqDone || locPassed(t.reqDone);
+  const next = LOC_TASKS.find(t => S[t.id] === 'initial' && parseMins(t.openTime) > now && reqOk(t));
   const hint = document.getElementById('next-hint');
   if (next) {
     const diff = parseMins(next.openTime) - now;
     if (diff === 0) hint.textContent = `📩 Umschlag ${next.num} ist jetzt offen!`;
     else hint.textContent = `🔒 Umschlag ${next.num} öffnet in ${fmtCountdown(diff)}`;
   } else {
-    const anyUnlockable = LOC_TASKS.find(t => S[t.id] === 'initial' && parseMins(t.openTime) <= now);
+    const anyUnlockable = LOC_TASKS.find(t => S[t.id] === 'initial' && parseMins(t.openTime) <= now && reqOk(t));
     hint.textContent = anyUnlockable ? `📩 Umschlag ${anyUnlockable.num} wartet auf dich!` : '';
   }
 }
