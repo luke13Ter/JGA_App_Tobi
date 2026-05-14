@@ -766,6 +766,7 @@
     }
     .belt-item.locked { opacity: .35; }
     .belt-item.is-current { border-color: var(--gold); box-shadow: 0 2px 14px rgba(156,123,48,.24); }
+    .belt-item.is-next { opacity: 1; border: 2px dashed rgba(156,123,48,.55); }
     .belt-item.new-unlock { border-color: var(--ok); animation: beltPop .45s cubic-bezier(.34,1.56,.64,1); }
     @keyframes beltPop {
       0%  { transform: scale(1); }
@@ -797,8 +798,9 @@
       font-size: .6rem; font-weight: 700; text-transform: uppercase;
       letter-spacing: .7px; padding: 2px 7px; border-radius: 5px;
     }
-    .belt-tag.cur { background: #fff3cd; color: #8a6000; }
-    .belt-tag.neu { background: #d4edda; color: #155724; }
+    .belt-tag.cur  { background: #fff3cd; color: #8a6000; }
+    .belt-tag.neu  { background: #d4edda; color: #155724; }
+    .belt-tag.next { background: rgba(156,123,48,.13); color: var(--gold); border: 1px dashed rgba(156,123,48,.4); }
     /* Requirement badges */
     .belt-reqs { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
     .req-badge {
@@ -1667,17 +1669,20 @@ function renderBeltPage(seenIdx) {
   BELTS.forEach((b, i) => {
     const unlocked   = i <= idx;
     const isCurrent  = i === idx;
+    const isNext     = i === idx + 1;
     const isNew      = unlocked && i > seen;
 
     let cls = 'belt-item';
-    if (!unlocked)  cls += ' locked';
+    if (!unlocked && !isNext) cls += ' locked';
     if (isCurrent)  cls += ' is-current';
+    if (isNext)     cls += ' is-next';
     if (isNew)      cls += ' new-unlock';
 
     const tags = [];
     if (isCurrent) tags.push(`<span class="belt-tag cur">Aktuell</span>`);
+    if (isNext)    tags.push(`<span class="belt-tag next">Nächster</span>`);
     if (isNew)     tags.push(`<span class="belt-tag neu">Neu ✨</span>`);
-    const icon = !unlocked ? '🔒' : isCurrent ? '' : '✅';
+    const icon = (!unlocked && !isNext) ? '🔒' : isCurrent ? '' : isNext ? '🎯' : '✅';
 
     let reqsHtml = '';
     if (i === 0) {
