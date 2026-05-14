@@ -722,12 +722,24 @@
     .belt-overlay.open { display: block; }
     .belt-ov-hdr {
       background: var(--green); color: #fff;
-      padding: 14px 16px 16px;
-      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px 15px;
       position: sticky; top: 0; z-index: 1;
       box-shadow: 0 2px 8px rgba(0,0,0,.2);
     }
-    .belt-ov-hdr h2 { flex: 1; font-size: 1.05rem; font-weight: 700; margin: 0; }
+    .belt-ov-hdr-top {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 13px;
+    }
+    .belt-ov-hdr-top span { font-size: .78rem; opacity: .65; letter-spacing: .3px; }
+    .belt-ov-cur { display: flex; align-items: center; gap: 13px; }
+    .belt-ov-cur-name { font-family: var(--f-head); font-size: 1.18rem; font-weight: 700; }
+    .belt-ov-cur-sub  { font-size: .7rem; opacity: .58; margin-top: 3px; }
+    .belt-visual-lg {
+      flex-shrink: 0; width: 72px; height: 48px;
+      position: relative; display: flex; align-items: center; justify-content: center;
+    }
+    .belt-visual-lg .belt-strap { width: 72px; height: 17px; }
+    .belt-visual-lg .belt-knot  { width: 24px; height: 32px; }
     .btn-close-belt {
       background: rgba(255,255,255,.18); border: none; color: #fff;
       border-radius: 8px; padding: 7px 13px;
@@ -740,19 +752,33 @@
       border-radius: 14px; padding: 15px 16px;
       box-shadow: 0 1px 4px rgba(0,0,0,.07);
     }
-    .belt-pts-card-lbl {
-      font-size: .68rem; text-transform: uppercase;
-      letter-spacing: 1.8px; color: #aaa; font-weight: 700; margin-bottom: 10px;
+    .belt-next-target { margin-bottom: 12px; }
+    .belt-next-target .bnt-label {
+      font-size: .65rem; text-transform: uppercase;
+      letter-spacing: 1.6px; color: #aaa; font-weight: 700; margin-bottom: 4px;
     }
-    .belt-track { height: 8px; background: #d5cec3; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+    .belt-next-target .bnt-pts {
+      font-family: var(--f-head); font-size: 1.25rem; font-weight: 700; color: var(--gold);
+    }
+    .belt-track-wrap { position: relative; margin-bottom: 8px; }
+    .belt-track { height: 8px; background: #d5cec3; border-radius: 4px; overflow: hidden; }
     .belt-track-fill {
       height: 100%;
       background: linear-gradient(90deg, var(--green) 0%, var(--gold) 100%);
       border-radius: 4px; min-width: 4px;
       transition: width .5s cubic-bezier(.4,0,.2,1);
     }
+    #belt-track-ticks { position: absolute; inset: 0; pointer-events: none; }
+    .belt-track-tick {
+      position: absolute; top: 0; width: 2px; height: 8px;
+      background: rgba(255,255,255,.55); transform: translateX(-50%);
+    }
     .belt-pts-row { display: flex; justify-content: space-between; font-size: .8rem; color: #888; }
     .belt-pts-row strong { color: #1a1610; }
+    .belt-sec-lbl {
+      font-size: .62rem; text-transform: uppercase; letter-spacing: 1.8px;
+      color: #c0b8a8; font-weight: 700; padding: 12px 2px 5px;
+    }
 
     .belt-list-wrap { padding: 4px 14px 24px; }
 
@@ -1016,12 +1042,18 @@
 <!-- BELT OVERLAY -->
 <div class="belt-overlay" id="belt-overlay">
   <div class="belt-ov-hdr">
-    <h2>🏆 Gürtelprogression</h2>
-    <button class="btn-close-belt" onclick="closeBeltPage()">✕ Schließen</button>
+    <div class="belt-ov-hdr-top">
+      <span>🏆 Gürtelprogression</span>
+      <button class="btn-close-belt" onclick="closeBeltPage()">✕ Schließen</button>
+    </div>
+    <div class="belt-ov-cur" id="belt-hdr-cur"></div>
   </div>
   <div class="belt-pts-card">
-    <div class="belt-pts-card-lbl">Bonus-Punkte</div>
-    <div class="belt-track"><div class="belt-track-fill" id="belt-bar-fill" style="width:0%"></div></div>
+    <div id="belt-next-target"></div>
+    <div class="belt-track-wrap">
+      <div class="belt-track"><div class="belt-track-fill" id="belt-bar-fill" style="width:0%"></div></div>
+      <div id="belt-track-ticks"></div>
+    </div>
     <div class="belt-pts-row">
       <span id="belt-bar-pts"><strong>0</strong> / 255 Pkt</span>
       <span id="belt-bar-pct">0 %</span>
@@ -1665,12 +1697,46 @@ function renderBeltPage(seenIdx) {
   document.getElementById('belt-bar-pts').innerHTML    = `<strong>${bp}</strong> / 255 Pkt`;
   document.getElementById('belt-bar-pct').textContent  = pct + ' %';
 
+  // Tick marks at each belt threshold
+  document.getElementById('belt-track-ticks').innerHTML =
+    BELTS.slice(1).map(b =>
+      `<div class="belt-track-tick" style="left:${Math.round(b.pts / 255 * 100)}%"></div>`
+    ).join('');
+
+  // Next belt target card
+  const nextBelt = BELTS[idx + 1];
+  const ntEl = document.getElementById('belt-next-target');
+  if (nextBelt) {
+    const needed = nextBelt.pts - bp;
+    ntEl.innerHTML = needed <= 0
+      ? `<div class="bnt-label">Bereit für nächsten Gürtel!</div><div><strong>${nextBelt.name}er Gürtel</strong></div>`
+      : `<div class="bnt-label">Nächster Gürtel</div>
+         <div><span class="bnt-pts">noch ${needed} Pkt</span> &rarr; <strong>${nextBelt.name}er Gürtel</strong></div>`;
+  } else {
+    ntEl.innerHTML = `<div class="bnt-label">🥋 Alle Gürtel erreicht!</div>`;
+  }
+
+  // Current belt in header
+  const curBelt = BELTS[idx];
+  document.getElementById('belt-hdr-cur').innerHTML = `
+    <div class="belt-visual belt-visual-lg" style="--bc:${curBelt.color}">
+      <div class="belt-strap"></div><div class="belt-knot"></div>
+    </div>
+    <div>
+      <div class="belt-ov-cur-name">${curBelt.name}er Gürtel</div>
+      <div class="belt-ov-cur-sub">Dein aktueller Gürtel</div>
+    </div>`;
+
   let h = '';
   BELTS.forEach((b, i) => {
     const unlocked   = i <= idx;
     const isCurrent  = i === idx;
     const isNext     = i === idx + 1;
     const isNew      = unlocked && i > seen;
+
+    if (i === 0)        h += `<div class="belt-sec-lbl">Erreicht</div>`;
+    if (i === idx + 1)  h += `<div class="belt-sec-lbl">Nächstes Ziel</div>`;
+    if (i === idx + 2)  h += `<div class="belt-sec-lbl">Gesperrt</div>`;
 
     let cls = 'belt-item';
     if (!unlocked && !isNext) cls += ' locked';
