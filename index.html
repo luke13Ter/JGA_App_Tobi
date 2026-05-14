@@ -1678,6 +1678,7 @@ function openBeltPage() {
   const prevSeen = S['_beltSeen'] ?? 0;
   renderBeltPage(prevSeen);
   document.getElementById('belt-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
   S['_beltSeen'] = currentBeltIdx();
   save();
   updateFabBadge();
@@ -1685,6 +1686,7 @@ function openBeltPage() {
 
 function closeBeltPage() {
   document.getElementById('belt-overlay').classList.remove('open');
+  document.body.style.overflow = '';
 }
 
 function renderBeltPage(seenIdx) {
