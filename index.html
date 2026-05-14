@@ -1103,7 +1103,7 @@ const LOC_TASKS = [
   {
     id: 'L1', num: 1,
     outerTitle: 'Der Schüler grüßt',
-    openTime: '11:00', deadline: '11:30', window: '30 Min',
+    openTime: '10:00', deadline: '10:45', window: '45 Min',
     evening: false,
     destination: 'Náplavka Bauernmarkt',
     address: 'Rašínovo nábřeží, Praha 2',
@@ -1116,7 +1116,7 @@ const LOC_TASKS = [
   {
     id: 'L2', num: 2,
     outerTitle: 'All You Need Is Love',
-    openTime: '11:30', deadline: '12:30', window: '60 Min',
+    openTime: '10:45', deadline: '12:00', window: '75 Min',
     evening: false,
     destination: 'John Lennon Wall',
     address: 'Velkopřevorské náměstí, Malá Strana',
@@ -1128,7 +1128,7 @@ const LOC_TASKS = [
   {
     id: 'L3', num: 3,
     outerTitle: 'Lord Shen',
-    openTime: '12:30', deadline: '13:00', window: '30 Min',
+    openTime: '12:00', deadline: '12:45', window: '45 Min',
     evening: false,
     destination: 'Wallenstein Palastgarten',
     address: 'Letenská 4, Malá Strana · Eintritt frei',
@@ -1146,7 +1146,7 @@ const LOC_TASKS = [
   {
     id: 'L4', num: 4,
     outerTitle: 'Na zdraví!',
-    openTime: '13:00', deadline: '14:00', window: '60 Min',
+    openTime: '12:45', deadline: '14:00', window: '75 Min',
     evening: false,
     destination: 'Letná Biergarten',
     address: 'Letenské sady 341, Praha 7 · ab 11:00 Uhr',
@@ -1178,7 +1178,7 @@ const LOC_TASKS = [
     id: 'L6', num: 6,
     outerTitle: 'Der letzte Kampf',
     openTime: '17:00', deadline: null, window: '30 Min',
-    evening: true,
+    evening: true, reqDone: 'L5',
     destination: 'Joystick Arcade Bar',
     address: 'Jindřišská 5, Nové Město',
     body: `<p>Du hast dich verbeuge vor Standbesitzern. Du hast Liebesgedichte an Wände geschrieben. Du hast einem Pfau ins Auge gesehen. Du hast mit Fremden auf deine Hochzeit angestoßen.</p>
@@ -1446,7 +1446,8 @@ function renderLocTask(t) {
   }
 
   // Initial: unlockable or locked
-  const canUnlock = now >= openMins;
+  const reqMet    = !t.reqDone || locPassed(t.reqDone);
+  const canUnlock = now >= openMins && reqMet;
 
   if (canUnlock) {
     const blocked = maxed || locBusy || hasPendingShot();
@@ -1462,14 +1463,17 @@ function renderLocTask(t) {
     </div>`;
   }
 
-  // Locked: show countdown with wax seal
-  const waitMins = openMins - now;
+  // Locked: show countdown or prerequisite hint
+  const waitMins  = openMins - now;
+  const lockedSub = !reqMet
+    ? `🔒 Erst nach Abschluss von Aufgabe ${LOC_TASKS.find(l => l.id === t.reqDone)?.num} verfügbar`
+    : `🕐 Öffnet ${t.openTime} · noch ${fmtCountdown(waitMins)}`;
   return `
   <div class="loc-locked">
     <div class="env-content">
       <div class="env-num">Umschlag ${t.num}</div>
       <div class="env-heading">${t.outerTitle}</div>
-      <div class="env-sub">🕐 Öffnet ${t.openTime} · noch ${fmtCountdown(waitMins)}</div>
+      <div class="env-sub">${lockedSub}</div>
       ${t.deadline ? `<div class="env-badges"><span class="deadline-badge">⏰ bis ${t.deadline} Uhr</span></div>` : ''}
     </div>
     <div class="env-seal">${t.num}</div>
@@ -1483,7 +1487,7 @@ function renderProg() {
   const evening = LOC_TASKS.filter(t =>  t.evening);
   let h = '';
 
-  h += `<div class="sec-label">Tagesprogramm · 11:00 – 17:00</div>`;
+  h += `<div class="sec-label">Tagesprogramm · 10:00 – 17:00</div>`;
   day.forEach(t => { h += renderLocTask(t); });
 
   h += `<div class="sec-label">Abendprogramm</div>`;
