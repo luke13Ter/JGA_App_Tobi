@@ -439,7 +439,10 @@
       box-shadow: 0 1px 3px rgba(0,0,0,.06);
       transition: opacity .2s;
     }
-    .locked-row.dimmed { opacity: .4; pointer-events: none; }
+    .locked-row.dimmed      { opacity: .4; pointer-events: none; }
+    .locked-row.belt-locked { opacity: .45; pointer-events: none; }
+    .locked-row.belt-locked .ltitle { color: #aaa; }
+    .belt-lock-hint { font-size: .72rem; color: #bbb; white-space: nowrap; flex-shrink: 0; }
     .locked-row .linfo { flex: 1; min-width: 0; }
     .locked-row .ltitle { font-weight: 600; font-size: .92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .locked-row .lmeta  { font-size: .74rem; color: #aaa; margin-top: 5px; display: flex; align-items: center; gap: 8px; }
@@ -884,6 +887,36 @@
     }
     .penalty-confirm:active { filter: brightness(.88); }
 
+    /* ── EMERGENCY CARD ─────────────────────────────────────── */
+    .emergency-card {
+      background: var(--card); border-radius: 14px; overflow: hidden;
+      box-shadow: 0 3px 14px rgba(140,53,39,.22);
+      margin-bottom: 14px; border: 2px solid var(--red);
+      animation: slideIn .25s ease;
+    }
+    .emergency-hd {
+      background: linear-gradient(135deg, #8c3527 0%, #5c1a10 100%);
+      color: #fff; padding: 13px 18px; position: relative; overflow: hidden;
+    }
+    .emergency-hd::after {
+      content: ''; position: absolute; top: -18px; right: -18px;
+      width: 80px; height: 80px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.12); pointer-events: none;
+    }
+    .emergency-hd .e-label { font-size: .65rem; opacity: .75; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+    .emergency-hd .e-title { font-family: var(--f-head); font-size: 1.08rem; font-weight: 700; }
+    .emergency-body { padding: 14px 16px 4px; font-size: .91rem; line-height: 1.65; }
+    .emergency-footer { padding: 8px 16px 16px; }
+    .e-pts { font-size: .78rem; color: #888; margin-bottom: 10px; }
+    .e-pts strong { color: var(--red); }
+    .btn-emergency {
+      width: 100%; padding: 13px; border: none; border-radius: 10px;
+      background: var(--red); color: #fff;
+      font-size: .93rem; font-weight: 700; cursor: pointer;
+      font-family: var(--f-body); transition: filter .15s;
+    }
+    .btn-emergency:active { filter: brightness(.88); }
+
     /* ── UTIL ───────────────────────────────────────────────── */
     .reset-area { text-align: center; margin-top: 32px; }
     .btn-reset { font-size: .7rem; color: #ccc; background: none; border: none; cursor: pointer; padding: 8px 16px; }
@@ -1108,6 +1141,7 @@ let S = {};
 function loadState() {
   try { S = JSON.parse(localStorage.getItem(S_KEY) || '{}'); } catch(e) { S = {}; }
   [...LOC_TASKS, ...BONUS_TASKS].forEach(t => { if (!S[t.id]) S[t.id] = 'initial'; });
+  EMERGENCY_TASKS.forEach(t => { if (!S[t.id]) S[t.id] = 'initial'; });
 }
 function save() { localStorage.setItem(S_KEY, JSON.stringify(S)); }
 
@@ -1144,7 +1178,29 @@ function hasPendingShot() {
 function locPassed(id) { return S[id] === 'done' || S[id] === 'shot'; }
 
 function bonusPoints() {
-  return BONUS_TASKS.filter(t => S[t.id] === 'done').reduce((s, t) => s + t.pts, 0);
+  const reg = BONUS_TASKS.filter(t => S[t.id] === 'done').reduce((s, t) => s + t.pts, 0);
+  const em  = EMERGENCY_TASKS.reduce((s, t) => s + (S[t.id + '_pts'] || 0), 0);
+  return reg + em;
+}
+
+function getEmergencyTask() {
+  const idx      = currentBeltIdx();
+  const nextBelt = BELTS[idx + 1];
+  if (!nextBelt) return null;
+  if (bonusPoints() >= nextBelt.pts) return null;
+  const anyRemaining = BONUS_TASKS.some(t =>
+    t.beltReq <= idx && (S[t.id] === 'initial' || S[t.id] === 'active')
+  );
+  if (anyRemaining) return null;
+  return EMERGENCY_TASKS.find(t => S[t.id] === 'initial') || null;
+}
+
+function completeEmergency(id) {
+  const needed = Math.max(1, BELTS[currentBeltIdx() + 1].pts - bonusPoints());
+  S[id] = 'done';
+  S[id + '_pts'] = needed;
+  save();
+  render();
 }
 
 function currentBeltIdx() {
@@ -1264,64 +1320,78 @@ const BELTS = [
   { name:'Schwarz', color:'#1a1610', locId:'L6', pts:170 },
 ];
 
+// ── DATA: EMERGENCY TASKS ──────────────────────────────────────────────────────
+const EMERGENCY_TASKS = [
+  { id:'N01', title:'Die Runde geht auf mich',
+    body:`<p>Spendier der gesamten Gruppe eine Runde Getränke – egal was, egal wo. Kein Ausweichen, keine Ausreden.</p>` },
+  { id:'N02', title:'Prager Souvenir',
+    body:`<p>Kauf das sinnloseste oder peinlichste Touristensouvenir das du findest – für maximal 100 CZK.</p>` },
+];
+
 // ── DATA: BONUS TASKS ──────────────────────────────────────────────────────────
 
 const BONUS_TASKS = [
-  { id:'B01', title:'Anna hasst diesen Trick',    pts:5,  time:'10 Min',
+  // ── Weiß (beltReq 0) · 5 Aufgaben · max 55 Pkt ──────────────
+  { id:'B01', beltReq:0, title:'Anna hasst diesen Trick',    pts:5,  time:'10 Min',
     body:`<p>Finde eine Taube. Stelle dich in 30 cm Abstand direkt gegenüber und starre sie an. Keine Bewegung, kein Lachen, kein Scheuchen – nur Blickkontakt.</p><p>Ziel: Die Taube verlässt den Bereich oder blinzelt zuerst. Zeitlimit: <strong>90 Sekunden</strong>.</p>`,
     penalty:'Strafshot. Die Taube hat gewonnen.' },
-  { id:'B02', title:'Schwerpunkt',                pts:10, time:'15 Min',
+  { id:'B02', beltReq:0, title:'Schwerpunkt',                pts:10, time:'15 Min',
     body:`<p>Die Gruppe wählt einen Gegenstand und legt ihn auf deinen Kopf. Laufe damit <strong>20 Schritte geradeaus</strong> ohne ihn mit den Händen zu halten. Fällt er: neu anfangen. Du hast <strong>3 Versuche</strong>.</p>`,
     penalty:'Strafshot. Ein Karatemeister ohne Gleichgewicht ist nichts.' },
-  { id:'B03', title:'Sprachbarriere',             pts:10, time:'15 Min',
+  { id:'B03', beltReq:0, title:'Sprachbarriere',             pts:10, time:'15 Min',
     body:`<p>Sprich einen Einheimischen, Kellner oder Barkeeper an und bitte um einen Tschechisch-Crashkurs. 5 Wörter lernen – der Lehrer muss mindestens 3 zum Nachsprechen geben.</p><p class="task-note">Die Wörter werden am Ende des Tages der Gruppe vorgetragen.</p>`,
     penalty:'Strafshot. Wenigstens „Na zdraví" richtig aussprechen.' },
-  { id:'B04', title:'Die Zeitkapsel',             pts:10, time:'15 Min',
-    body:`<p>Nimm eine Sprachnachricht auf – an dich selbst. Zu öffnen am <strong>Tag der Hochzeit</strong>.</p><p>Inhalt: Ein Rat für das erste Ehejahr.</p><p class="task-note">Die Aufnahme wird nicht gelöscht und dem Bräutigam übergeben.</p>`,
-    penalty:'Strafshot. An der Hochzeit wirst du wissen, warum du das hättest tun sollen.' },
-  { id:'B05', title:'Das Wappen der Sippe',       pts:10, time:'15 Min',
-    body:`<p>Zeichne in <strong>7 Minuten</strong> das Familienwappen der zukünftigen Familie.</p><ul><li>Ein Tier (kein Adler)</li><li>Ein Symbol für die Braut, eines für den Bräutigam</li><li>Ein erfundener lateinischer Wahlspruch</li></ul><p class="task-note">Gruppe vergibt eine Note (1–5).</p>`,
-    penalty:'Note 4 oder schlechter: Strafshot. Das Wappen hängt trotzdem – als ewige Mahnung.' },
-  { id:'B06', title:'Inkognito',                  pts:15, time:'20 Min',
-    body:`<p>Du bist jetzt eine Berühmtheit. Wer genau – die Gruppe entscheidet.</p><p>Überzeuge <strong>2 Fremde</strong>, dass du ein bekannter Schauspieler, Sportler oder Influencer bist. Ziel: Selfie „für die Fans".</p><p class="task-note">Auftreten: selbstverständlich, lässig, gelangweilt vom Ruhm.</p>`,
-    penalty:'Strafshot. Niemand wollte ein Foto mit dir.' },
-  { id:'B07', title:'Entschleunigung',            pts:15, time:'15 Min',
+  { id:'B07', beltReq:0, title:'Entschleunigung',            pts:15, time:'15 Min',
     body:`<p>Ab jetzt: <strong>2 Minuten Zeitlupe</strong>. Gehen, Trinken, Sprechen – alles in Zeitlupe. Ein Gruppenmitglied summt den Soundtrack. Gruppe wählt.</p><p class="task-note">Bei Lachen oder Abbruch: neu anfangen.</p>`,
     penalty:'Strafshot. In Zeitlupe.' },
-  { id:'B08', title:'Sir David',                  pts:15, time:'15 Min',
-    body:`<p>Du bist David Attenborough. <strong>60 Sekunden lang</strong> das Geschehen um dich herum als BBC-Naturdokumentation kommentieren: tiefe Stimme, dramatische Pausen, wissenschaftlicher Ernst.</p><p class="task-note">Mindestens ein Tier oder Mensch muss als Spezies benannt werden.</p>`,
-    penalty:'Strafshot. BBC-Vertrag gekündigt.' },
-  { id:'B09', title:'Wucher!!!',                  pts:15, time:'20 Min',
+  { id:'B09', beltReq:0, title:'Wucher!!!',                  pts:15, time:'20 Min',
     body:`<p>Kaufe irgendetwas und verhandle den Preis. Ziel: Mindestens <strong>1 CZK Rabatt</strong>.</p><p class="task-note">Keine Drohungen, kein Mitleid. Nur Charme. Gruppe ist Zeuge.</p>`,
     penalty:'Du kaufst zum vollen Preis. Plus Strafshot.' },
-  { id:'B10', title:'Image-Pflege',               pts:15, time:'30 Min',
-    body:`<p>Die Gruppe malt dir einen Streifen auf jede Wange. Die Bemalung bleibt <strong>mindestens 30 Minuten</strong> dran – überall. Kein Abwischen.</p>`,
-    penalty:'Strafshot. Dein Image ist am Bröckeln.' },
-  { id:'B11', title:'Street Fight',               pts:20, time:'25 Min',
-    body:`<p>Suche einen öffentlichen Platz mit mindestens 5 Personen in Sichtweite. Führe eine Karate-Kata durch – mindestens <strong>30 Sekunden</strong>, in voller Ernsthaftigkeit.</p>`,
-    penalty:'Strafshot. Und die Kata findet trotzdem statt.' },
-  { id:'B12', title:'Weisheiten des Lebens',      pts:20, time:'25 Min',
-    body:`<p>Sprich <strong>3 Fremde</strong> an und teile jedem die wichtigste Lektion deines Lebens mit – ein Satz, ohne Kontext, direkt rein. Auf Englisch okay.</p>`,
-    penalty:'Strafshot. Deine Weisheit hat versagt.' },
-  { id:'B13', title:'Kampfkunsttraining',         pts:10, time:'15 Min',
+  // ── Gelb (beltReq 1) · 4 Aufgaben · max 45 Pkt ──────────────
+  { id:'B04', beltReq:1, title:'Die Zeitkapsel',             pts:10, time:'15 Min',
+    body:`<p>Nimm eine Sprachnachricht auf – an dich selbst. Zu öffnen am <strong>Tag der Hochzeit</strong>.</p><p>Inhalt: Ein Rat für das erste Ehejahr.</p><p class="task-note">Die Aufnahme wird nicht gelöscht und dem Bräutigam übergeben.</p>`,
+    penalty:'Strafshot. An der Hochzeit wirst du wissen, warum du das hättest tun sollen.' },
+  { id:'B05', beltReq:1, title:'Das Wappen der Sippe',       pts:10, time:'15 Min',
+    body:`<p>Zeichne in <strong>7 Minuten</strong> das Familienwappen der zukünftigen Familie.</p><ul><li>Ein Tier (kein Adler)</li><li>Ein Symbol für die Braut, eines für den Bräutigam</li><li>Ein erfundener lateinischer Wahlspruch</li></ul><p class="task-note">Gruppe vergibt eine Note (1–5).</p>`,
+    penalty:'Note 4 oder schlechter: Strafshot. Das Wappen hängt trotzdem – als ewige Mahnung.' },
+  { id:'B08', beltReq:1, title:'Sir David',                  pts:15, time:'15 Min',
+    body:`<p>Du bist David Attenborough. <strong>60 Sekunden lang</strong> das Geschehen um dich herum als BBC-Naturdokumentation kommentieren: tiefe Stimme, dramatische Pausen, wissenschaftlicher Ernst.</p><p class="task-note">Mindestens ein Tier oder Mensch muss als Spezies benannt werden.</p>`,
+    penalty:'Strafshot. BBC-Vertrag gekündigt.' },
+  { id:'B13', beltReq:1, title:'Kampfkunsttraining',         pts:10, time:'15 Min',
     body:`<p>Fordere eine fremde Person zum Stein-Schere-Papier-Duell heraus – Best of 3. Kein Kontext, keine Erklärung. Einfach: <strong>„Rock, paper, scissors?"</strong></p><p class="task-note">Gruppe beobachtet. Ergebnis wird notiert.</p>`,
     penalty:'Strafshot. Stein schlägt Schüler.' },
-  { id:'B14', title:'Dein Bester Gefährte',       pts:10, time:'20 Min',
+  // ── Orang (beltReq 2) · 3 Aufgaben · max 45 Pkt ─────────────
+  { id:'B06', beltReq:2, title:'Inkognito',                  pts:15, time:'20 Min',
+    body:`<p>Du bist jetzt eine Berühmtheit. Wer genau – die Gruppe entscheidet.</p><p>Überzeuge <strong>2 Fremde</strong>, dass du ein bekannter Schauspieler, Sportler oder Influencer bist. Ziel: Selfie „für die Fans".</p><p class="task-note">Auftreten: selbstverständlich, lässig, gelangweilt vom Ruhm.</p>`,
+    penalty:'Strafshot. Niemand wollte ein Foto mit dir.' },
+  { id:'B11', beltReq:2, title:'Street Fight',               pts:20, time:'25 Min',
+    body:`<p>Suche einen öffentlichen Platz mit mindestens 5 Personen in Sichtweite. Führe eine Karate-Kata durch – mindestens <strong>30 Sekunden</strong>, in voller Ernsthaftigkeit.</p>`,
+    penalty:'Strafshot. Und die Kata findet trotzdem statt.' },
+  { id:'B14', beltReq:2, title:'Dein Bester Gefährte',       pts:10, time:'20 Min',
     body:`<p>Finde eine Katze. Bringe sie dazu, <strong>zu dir zu kommen oder auf dich zu reagieren</strong>. Kein Aufheben, kein Hinterherrennen, kein Futter. Nur Geduld.</p><p class="task-note">Die Gruppe urteilt: Hat die Katze reagiert?</p>`,
     penalty:'Die Katze hat dich ignoriert. Strafshot.' },
-  { id:'B15', title:'Feldpost',                   pts:10, time:'10 Min',
+  // ── Grün (beltReq 3) · 3 Aufgaben · max 40 Pkt ──────────────
+  { id:'B10', beltReq:3, title:'Image-Pflege',               pts:15, time:'30 Min',
+    body:`<p>Die Gruppe malt dir einen Streifen auf jede Wange. Die Bemalung bleibt <strong>mindestens 30 Minuten</strong> dran – überall. Kein Abwischen.</p>`,
+    penalty:'Strafshot. Dein Image ist am Bröckeln.' },
+  { id:'B15', beltReq:3, title:'Feldpost',                   pts:10, time:'10 Min',
     body:`<p>Schicke der Braut eine Sprachnachricht – dramatisch, ernst, mit Pathos:</p><blockquote>„Ich trainiere gerade für die Ehe. Es ist schwerer als erwartet. Aber ich bin bereit."</blockquote><p class="task-note">Gruppe hört die Nachricht vor dem Absenden ab.</p>`,
     penalty:'Strafshot. Die Gruppe schickt eine eigene Nachricht an die Braut.' },
-  { id:'B16', title:'Anklage',                    pts:15, time:'20 Min',
+  { id:'B16', beltReq:3, title:'Anklage',                    pts:15, time:'20 Min',
     body:`<p>Die Anklage lautet:</p><blockquote>„Er hat auf der letzten Gruppenreise das letzte Bier genommen, nichts nachgekauft und einen leeren Kühlschrank mit einem Post-it 'War lecker – danke!' hinterlassen."</blockquote><p>1 Minute Verteidigung. Dann Abstimmung.</p><ul><li>Freigesprochen → Bestanden</li><li>Schuldig → Strafshot + Gruppenstrafe</li></ul>`,
     penalty: null },
-  { id:'B17', title:'Last Man Standing',          pts:15, time:'15 Min',
+  // ── Blau (beltReq 4) · 2 Aufgaben · max 35 Pkt ──────────────
+  { id:'B12', beltReq:4, title:'Weisheiten des Lebens',      pts:20, time:'25 Min',
+    body:`<p>Sprich <strong>3 Fremde</strong> an und teile jedem die wichtigste Lektion deines Lebens mit – ein Satz, ohne Kontext, direkt rein. Auf Englisch okay.</p>`,
+    penalty:'Strafshot. Deine Weisheit hat versagt.' },
+  { id:'B17', beltReq:4, title:'Last Man Standing',          pts:15, time:'15 Min',
     body:`<p><strong>3 Runden Stare-Down</strong> gegen ein Gruppenmitglied – je 30 Sekunden, Augenkontakt halten. Kein Blinzeln, kein Lachen. Best of 3.</p><p class="task-note">Verlierer macht beim nächsten Strafshot mit.</p>`,
     penalty:'Strafshot. Wer den Blick nicht halten kann, hält auch die Ehe nicht.' },
-  { id:'B18', title:'Schweigen ist Gold',         pts:15, time:'20 Min',
+  // ── Braun (beltReq 5) · 2 Aufgaben · max 35 Pkt ─────────────
+  { id:'B18', beltReq:5, title:'Schweigen ist Gold',         pts:15, time:'20 Min',
     body:`<p>Betritt eine Bar oder einen Kiosk und bestelle etwas – <strong>ohne ein einziges Wort</strong>. Nur Gestik, Mimik, Zeigen. Kein Handy als Übersetzer.</p>`,
     penalty:'Du bestellst nochmal – laut und auf Tschechisch. Strafshot.' },
-  { id:'B19', title:'Vom Schüler zum Meister',    pts:20, time:'25 Min',
+  { id:'B19', beltReq:5, title:'Vom Schüler zum Meister',    pts:20, time:'25 Min',
     body:`<p>Finde Touristen und biete ihnen eine <strong>2-minütige Stadtführung</strong> an. Inhalt: frei erfunden. Alle Fakten dürfen ausgedacht sein. Sprache: Englisch.</p>`,
     penalty:'Strafshot. Kein Fremdenführer, nirgends.' }
 ];
@@ -1560,14 +1630,33 @@ function renderProg() {
 // ── RENDER: BONUS TAB ─────────────────────────────────────────────────────────
 
 function renderBonus() {
-  const active    = BONUS_TASKS.filter(t => S[t.id] === 'active');
-  const locked    = BONUS_TASKS.filter(t => S[t.id] === 'initial');
-  const done      = BONUS_TASKS.filter(t => S[t.id] === 'done');
-  const failed    = BONUS_TASKS.filter(t => S[t.id] === 'failed');
-  const completed = [...done, ...failed].sort((a,b) => a.id.localeCompare(b.id));
-  const maxed     = activeCount() >= 2;
+  const beltIdx    = currentBeltIdx();
+  const active     = BONUS_TASKS.filter(t => S[t.id] === 'active');
+  const available  = BONUS_TASKS.filter(t => S[t.id] === 'initial' && t.beltReq <= beltIdx);
+  const beltLocked = BONUS_TASKS.filter(t => S[t.id] === 'initial' && t.beltReq > beltIdx);
+  const done       = BONUS_TASKS.filter(t => S[t.id] === 'done');
+  const failed     = BONUS_TASKS.filter(t => S[t.id] === 'failed');
+  const completed  = [...done, ...failed].sort((a,b) => a.id.localeCompare(b.id));
+  const maxed      = activeCount() >= 2;
 
   let h = '';
+
+  const et = getEmergencyTask();
+  if (et) {
+    const needed = Math.max(1, BELTS[currentBeltIdx() + 1].pts - bonusPoints());
+    h += `
+    <div class="emergency-card">
+      <div class="emergency-hd">
+        <div class="e-label">🚨 Notfallplan</div>
+        <div class="e-title">${et.title}</div>
+      </div>
+      <div class="emergency-body">${et.body}</div>
+      <div class="emergency-footer">
+        <div class="e-pts">Wert: <strong>+${needed} Punkte</strong> – genau genug für den nächsten Gürtel</div>
+        <button class="btn-emergency" onclick="completeEmergency('${et.id}')">✓ Erledigt</button>
+      </div>
+    </div>`;
+  }
 
   h += `<div class="sec-label">Aktive Bonus-Aufgaben</div>`;
   if (active.length === 0) {
@@ -1597,11 +1686,11 @@ function renderBonus() {
     });
   }
 
-  if (locked.length > 0) {
-    h += `<div class="sec-label">Verfügbar (${locked.length})</div>`;
+  if (available.length > 0) {
+    h += `<div class="sec-label">Verfügbar (${available.length})</div>`;
     if (hasPendingShot()) h += `<div class="max-banner" style="background:#fef0f0;border-color:var(--red);color:#c0392b;">🥃 Erst den Strafshot trinken – dann geht's weiter!</div>`;
     else if (maxed) h += `<div class="max-banner">Erst eine aktive Aufgabe abschließen.</div>`;
-    locked.forEach(t => {
+    available.forEach(t => {
       h += `
       <div class="locked-row${maxed ? ' dimmed' : ''}">
         <div class="linfo">
@@ -1609,6 +1698,21 @@ function renderBonus() {
           <div class="lmeta"><span class="pts-badge">⭐ ${t.pts} Pkt</span><span class="time-badge">⏱ ${t.time}</span></div>
         </div>
         <button class="btn-open" onclick="askBonusOpen('${t.id}')">Öffnen</button>
+      </div>`;
+    });
+  }
+
+  if (beltLocked.length > 0) {
+    h += `<div class="sec-label">Noch gesperrt (${beltLocked.length})</div>`;
+    beltLocked.forEach(t => {
+      const beltName = BELTS[t.beltReq].name + 'er Gürtel';
+      h += `
+      <div class="locked-row belt-locked">
+        <div class="linfo">
+          <div class="ltitle">${t.title}</div>
+          <div class="lmeta"><span class="pts-badge">⭐ ${t.pts} Pkt</span><span class="time-badge">⏱ ${t.time}</span></div>
+        </div>
+        <span class="belt-lock-hint">🔒 ${beltName}</span>
       </div>`;
     });
   }
