@@ -772,7 +772,25 @@
       45% { transform: scale(1.03); }
       100%{ transform: scale(1); }
     }
-    .belt-emoji { font-size: 1.8rem; flex-shrink: 0; line-height: 1; }
+    /* Belt CSS visual */
+    .belt-visual {
+      flex-shrink: 0; width: 58px; height: 40px;
+      position: relative; display: flex; align-items: center; justify-content: center;
+    }
+    .belt-strap {
+      position: absolute; width: 58px; height: 14px; border-radius: 3px;
+      background: var(--bc, #ccc);
+      box-shadow: 0 2px 5px rgba(0,0,0,.28),
+                  inset 0 1px 0 rgba(255,255,255,.22),
+                  inset 0 -1px 0 rgba(0,0,0,.14);
+    }
+    .belt-knot {
+      position: absolute; width: 20px; height: 26px; border-radius: 3px; z-index: 1;
+      background: var(--bc, #ccc);
+      filter: brightness(.72);
+      box-shadow: 0 2px 6px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.1);
+      border: 1.5px solid rgba(0,0,0,.2);
+    }
     .belt-item-info { flex: 1; min-width: 0; }
     .belt-item-name { font-weight: 700; font-size: .95rem; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
     .belt-tag {
@@ -781,8 +799,17 @@
     }
     .belt-tag.cur { background: #fff3cd; color: #8a6000; }
     .belt-tag.neu { background: #d4edda; color: #155724; }
-    .belt-item-req { font-size: .75rem; color: #bbb; margin-top: 3px; }
-    .belt-item-req.done { color: var(--ok); }
+    /* Requirement badges */
+    .belt-reqs { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+    .req-badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 3px 9px; border-radius: 6px;
+      font-size: .68rem; font-weight: 600; letter-spacing: .1px;
+      border: 1px solid transparent;
+    }
+    .req-badge.b-done    { background: var(--okl); color: var(--ok); border-color: rgba(42,107,73,.22); }
+    .req-badge.b-partial { background: rgba(156,123,48,.12); color: var(--gold); border-color: rgba(156,123,48,.3); }
+    .req-badge.b-open    { background: rgba(26,22,16,.05); color: #aaa; border-color: rgba(26,22,16,.1); }
     .belt-status-icon { font-size: 1rem; flex-shrink: 0; }
 
     /* ── ACHIEVEMENT TOAST ───────────────────────────────────── */
@@ -1194,13 +1221,13 @@ const LOC_TASKS = [
 
 // ── DATA: BELTS ────────────────────────────────────────────────────────────────
 const BELTS = [
-  { name:'Weiß',    emoji:'🤍', locId:null, pts:0   },
-  { name:'Gelb',    emoji:'💛', locId:'L1', pts:15  },
-  { name:'Orang',   emoji:'🧡', locId:'L2', pts:40  },
-  { name:'Grün',    emoji:'💚', locId:'L3', pts:70  },
-  { name:'Blau',    emoji:'💙', locId:'L4', pts:105 },
-  { name:'Braun',   emoji:'🤎', locId:'L5', pts:135 },
-  { name:'Schwarz', emoji:'🖤', locId:'L6', pts:170 },
+  { name:'Weiß',    color:'#d8d4cc', locId:null, pts:0   },
+  { name:'Gelb',    color:'#cfa010', locId:'L1', pts:15  },
+  { name:'Orang',   color:'#c85510', locId:'L2', pts:40  },
+  { name:'Grün',    color:'#2a6b49', locId:'L3', pts:70  },
+  { name:'Blau',    color:'#1a5498', locId:'L4', pts:105 },
+  { name:'Braun',   color:'#7a3f18', locId:'L5', pts:135 },
+  { name:'Schwarz', color:'#1a1610', locId:'L6', pts:170 },
 ];
 
 // ── DATA: BONUS TASKS ──────────────────────────────────────────────────────────
@@ -1647,29 +1674,34 @@ function renderBeltPage(seenIdx) {
     if (isCurrent)  cls += ' is-current';
     if (isNew)      cls += ' new-unlock';
 
-    let reqText, reqDone = unlocked;
-    if (i === 0) {
-      reqText = 'Startgürtel';
-    } else {
-      const locOk = b.locId ? locPassed(b.locId) : true;
-      const ptsOk = bp >= b.pts;
-      const parts = [];
-      if (b.locId) parts.push(`Umschlag ${b.locId.replace('L','')}${locOk ? ' ✓' : ''}`);
-      parts.push(`${b.pts} Bonus-Pkt${(unlocked || ptsOk) ? ' ✓' : ` (${bp}/${b.pts})`}`);
-      reqText = parts.join(' · ');
-    }
-
     const tags = [];
     if (isCurrent) tags.push(`<span class="belt-tag cur">Aktuell</span>`);
     if (isNew)     tags.push(`<span class="belt-tag neu">Neu ✨</span>`);
     const icon = !unlocked ? '🔒' : isCurrent ? '' : '✅';
 
+    let reqsHtml = '';
+    if (i === 0) {
+      reqsHtml = `<span class="req-badge b-done">Startgürtel</span>`;
+    } else {
+      const locOk = b.locId ? locPassed(b.locId) : true;
+      const ptsOk = bp >= b.pts;
+      if (b.locId) {
+        const n = b.locId.replace('L','');
+        reqsHtml += `<span class="req-badge ${locOk ? 'b-done' : 'b-open'}">📍 Umschlag ${n}${locOk ? ' ✓' : ''}</span>`;
+      }
+      const ptsCls = ptsOk ? 'b-done' : (bp > 0 ? 'b-partial' : 'b-open');
+      reqsHtml += `<span class="req-badge ${ptsCls}">⭐ ${ptsOk ? b.pts + ' Pkt ✓' : bp + ' / ' + b.pts + ' Pkt'}</span>`;
+    }
+
     h += `
     <div class="${cls}">
-      <div class="belt-emoji">${b.emoji}</div>
+      <div class="belt-visual" style="--bc:${b.color}">
+        <div class="belt-strap"></div>
+        <div class="belt-knot"></div>
+      </div>
       <div class="belt-item-info">
         <div class="belt-item-name">${b.name}er Gürtel ${tags.join('')}</div>
-        <div class="belt-item-req ${reqDone ? 'done' : ''}">${reqText}</div>
+        <div class="belt-reqs">${reqsHtml}</div>
       </div>
       <div class="belt-status-icon">${icon}</div>
     </div>`;
@@ -1738,7 +1770,7 @@ function showBeltToast(belt, delayIdx) {
     const el = document.createElement('div');
     el.className = 'toast';
     el.innerHTML = `
-      <div class="toast-icon">${belt.emoji}</div>
+      <div class="toast-icon">🥋</div>
       <div class="toast-body">
         <div class="toast-lbl">🎉 Gürtel freigeschaltet!</div>
         <div class="toast-name">${belt.name}er Gürtel</div>
