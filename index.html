@@ -669,12 +669,13 @@
     @keyframes cursorBlink { 0%,100%{opacity:1} 50%{opacity:0} }
 
     .intro-hint {
-      margin-top: 48px; color: rgba(255,255,255,.3);
-      font-size: .7rem; letter-spacing: 1.5px;
+      margin-top: 48px; color: rgba(255,255,255,.85);
+      font-size: .75rem; letter-spacing: 1.5px;
       text-transform: uppercase;
+      text-shadow: 0 0 12px rgba(0,0,0,.8);
       animation: hintBlink 1.6s ease-in-out infinite;
     }
-    @keyframes hintBlink { 0%,100%{opacity:.3} 50%{opacity:.75} }
+    @keyframes hintBlink { 0%,100%{opacity:.65} 50%{opacity:1} }
 
     .intro-start {
       margin-top: 48px; display: none;
@@ -1195,7 +1196,7 @@ const LOC_TASKS = [
 const BELTS = [
   { name:'Weiß',    emoji:'🤍', locId:null, pts:0   },
   { name:'Gelb',    emoji:'💛', locId:'L1', pts:15  },
-  { name:'Orange',  emoji:'🧡', locId:'L2', pts:40  },
+  { name:'Orang',   emoji:'🧡', locId:'L2', pts:40  },
   { name:'Grün',    emoji:'💚', locId:'L3', pts:70  },
   { name:'Blau',    emoji:'💙', locId:'L4', pts:105 },
   { name:'Braun',   emoji:'🤎', locId:'L5', pts:135 },
@@ -1888,7 +1889,7 @@ const INTRO_SLIDES = [
   ['Scheiterst du?', 'Strafshot Jägermeister.', 'Die Gruppe urteilt. Immer.'],
   ['Du hast alles, was du brauchst.', 'Außer vielleicht Würde.', 'Aber die ist überschätzt.'],
   ['Viel Erfolg, Schüler.', 'Wir glauben an dich.', 'Meistens.'],
-  ['🥋', 'Möge der Kampf beginnen.'],
+  ['Möge der Kampf beginnen.'],
 ];
 
 let _iSlide   = 0;
